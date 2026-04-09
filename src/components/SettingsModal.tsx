@@ -7,9 +7,45 @@ interface Props {
   onClose: () => void
 }
 
+/** Extract owner + repo from a full GitHub URL or return as-is */
+function parseGitHubInput(input: string): { owner: string; repo: string } | null {
+  const trimmed = input.trim()
+  // https://github.com/owner/repo[/anything]
+  const match = trimmed.match(/github\.com\/([^/]+)\/([^/?\s#]+)/)
+  if (match) return { owner: match[1], repo: match[2] }
+  return null
+}
+
 export default function SettingsModal({ settings, onSave, onClose }: Props) {
   const [form, setForm] = useState<Settings>(settings)
   const [showKey, setShowKey] = useState(false)
+  const [repoInput, setRepoInput] = useState(
+    settings.repoOwner && settings.repoName
+      ? `${settings.repoOwner}/${settings.repoName}`
+      : '',
+  )
+
+  function handleRepoChange(val: string) {
+    setRepoInput(val)
+    const parsed = parseGitHubInput(val)
+    if (parsed) {
+      setForm((f) => ({ ...f, repoOwner: parsed.owner, repoName: parsed.repo }))
+    } else {
+      // treat as "owner/repo" shorthand
+      const parts = val.split('/')
+      setForm((f) => ({
+        ...f,
+        repoOwner: parts[0]?.trim() ?? '',
+        repoName: parts[1]?.trim() ?? '',
+      }))
+    }
+  }
+
+  const providerLabel = form.apiKey.startsWith('sk-ant-')
+    ? '✅ Anthropic key detected'
+    : form.apiKey.startsWith('sk-')
+    ? '✅ OpenAI key detected'
+    : ''
 
   function handleSave() {
     onSave(form)
@@ -43,7 +79,7 @@ export default function SettingsModal({ settings, onSave, onClose }: Props) {
                 type={showKey ? 'text' : 'password'}
                 value={form.apiKey}
                 onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
-                placeholder="sk-ant-..."
+                placeholder="sk-ant-... or sk-..."
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 pr-16"
               />
               <button
@@ -54,36 +90,36 @@ export default function SettingsModal({ settings, onSave, onClose }: Props) {
                 {showKey ? 'Hide' : 'Show'}
               </button>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Stored in your browser's localStorage only. Never sent anywhere except Anthropic.
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-slate-500">
+                Accepts Anthropic <span className="text-slate-400">or</span> OpenAI keys. Stored in localStorage only.
+              </p>
+              {providerLabel && (
+                <span className="text-xs text-emerald-400 shrink-0">{providerLabel}</span>
+              )}
+            </div>
           </div>
 
           {/* GitHub section */}
           <div className="border-t border-slate-800 pt-4">
             <p className="text-sm font-medium text-slate-300 mb-3">GitHub Repository Context</p>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Owner / Org</label>
-                <input
-                  type="text"
-                  value={form.repoOwner}
-                  onChange={(e) => setForm((f) => ({ ...f, repoOwner: e.target.value }))}
-                  placeholder="e.g. octocat"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Repository</label>
-                <input
-                  type="text"
-                  value={form.repoName}
-                  onChange={(e) => setForm((f) => ({ ...f, repoName: e.target.value }))}
-                  placeholder="e.g. loan-calculator"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">
+                GitHub URL or owner/repo
+              </label>
+              <input
+                type="text"
+                value={repoInput}
+                onChange={(e) => handleRepoChange(e.target.value)}
+                placeholder="https://github.com/owner/repo  or  owner/repo"
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+              />
+              {form.repoOwner && form.repoName && (
+                <p className="text-xs text-emerald-400 mt-1">
+                  ✓ {form.repoOwner}/{form.repoName}
+                </p>
+              )}
             </div>
 
             <div className="mt-3">

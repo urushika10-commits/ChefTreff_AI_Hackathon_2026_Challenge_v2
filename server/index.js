@@ -1,12 +1,20 @@
 import express from 'express'
 import cors from 'cors'
 import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 
 const app = express()
 const PORT = process.env.PORT || 3001
 
 app.use(cors({ origin: 'http://localhost:3000' }))
 app.use(express.json({ limit: '4mb' }))
+
+// Detect provider from key prefix
+function detectProvider(apiKey) {
+  if (apiKey.startsWith('sk-ant-')) return 'anthropic'
+  if (apiKey.startsWith('sk-') || apiKey.startsWith('sess-')) return 'openai'
+  return 'anthropic' // default fallback
+}
 
 // Health check
 app.get('/api/health', (_req, res) => res.json({ ok: true }))
@@ -28,56 +36,92 @@ app.post('/api/chat', async (req, res) => {
     res.write(`data: ${JSON.stringify(data)}\n\n`)
   }
 
+  const provider = detectProvider(apiKey)
+
   try {
-    const client = new Anthropic({ apiKey })
+    if (provider === 'anthropic') {
+      // ── Anthropic / Claude ──────────────────────────────────────────────
+      const client = new Anthropic({ apiKey })
 
-    const stream = client.messages.stream({
-      model: 'claude-opus-4-6',
-      max_tokens: 4096,
-      thinking: { type: 'adaptive' },
-      system: systemPrompt,
-      messages,
-    })
+      const stream = client.messages.stream({
+        model: 'claude-opus-4-6',
+        max_tokens: 4096,
+        thinking: { type: 'adaptive' },
+        system: systemPrompt,
+        messages,
+      })
 
-    let isInThinkingBlock = false
+      let isInThinkingBlock = false
 
-    stream.on('streamEvent', (event) => {
-      if (event.type === 'content_block_start') {
-        if (event.content_block.type === 'thinking') {
-          isInThinkingBlock = true
-          sendEvent({ type: 'thinking_start' })
-        } else if (event.content_block.type === 'text') {
-          isInThinkingBlock = false
+      stream.on('streamEvent', (event) => {
+        if (event.type === 'content_block_start') {
+          if (event.content_block.type === 'thinking') {
+            isInThinkingBlock = true
+            sendEvent({ type: 'thinking_start' })
+          } else if (event.content_block.type === 'text') {
+            isInThinkingBlock = false
+          }
+        } else if (event.type === 'content_block_delta') {
+          if (event.delta.type === 'thinking_delta') {
+            sendEvent({ type: 'thinking', text: event.delta.thinking })
+          } else if (event.delta.type === 'text_delta') {
+            sendEvent({ type: 'text', text: event.delta.text })
+          }
+        } else if (event.type === 'content_block_stop') {
+          if (isInThinkingBlock) {
+            sendEvent({ type: 'thinking_end' })
+            isInThinkingBlock = false
+          }
         }
-      } else if (event.type === 'content_block_delta') {
-        if (event.delta.type === 'thinking_delta') {
-          sendEvent({ type: 'thinking', text: event.delta.thinking })
-        } else if (event.delta.type === 'text_delta') {
-          sendEvent({ type: 'text', text: event.delta.text })
+      })
+
+      stream.on('finalMessage', (message) => {
+        sendEvent({
+          type: 'done',
+          usage: {
+            input: message.usage.input_tokens,
+            output: message.usage.output_tokens,
+          },
+        })
+        res.end()
+      })
+
+      stream.on('error', (err) => {
+        sendEvent({ type: 'error', message: err.message })
+        res.end()
+      })
+    } else {
+      // ── OpenAI / GPT ────────────────────────────────────────────────────
+      const client = new OpenAI({ apiKey })
+
+      const openaiMessages = [
+        { role: 'system', content: systemPrompt },
+        ...messages,
+      ]
+
+      const stream = await client.chat.completions.create({
+        model: 'gpt-4o',
+        stream: true,
+        messages: openaiMessages,
+      })
+
+      let inputTokens = 0
+      let outputTokens = 0
+
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta
+        if (delta?.content) {
+          sendEvent({ type: 'text', text: delta.content })
         }
-      } else if (event.type === 'content_block_stop') {
-        if (isInThinkingBlock) {
-          sendEvent({ type: 'thinking_end' })
-          isInThinkingBlock = false
+        if (chunk.usage) {
+          inputTokens = chunk.usage.prompt_tokens ?? 0
+          outputTokens = chunk.usage.completion_tokens ?? 0
         }
       }
-    })
 
-    stream.on('finalMessage', (message) => {
-      sendEvent({
-        type: 'done',
-        usage: {
-          input: message.usage.input_tokens,
-          output: message.usage.output_tokens,
-        },
-      })
+      sendEvent({ type: 'done', usage: { input: inputTokens, output: outputTokens } })
       res.end()
-    })
-
-    stream.on('error', (err) => {
-      sendEvent({ type: 'error', message: err.message })
-      res.end()
-    })
+    }
   } catch (err) {
     sendEvent({ type: 'error', message: err.message || 'Unknown error' })
     res.end()
