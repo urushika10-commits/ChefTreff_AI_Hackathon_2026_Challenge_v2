@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
-import type { ModeId, Role, Settings, LoadedFile } from '../lib/types'
+import type { ModeId, Role, Settings, LoadedFile, UploadedFiles } from '../lib/types'
 import { MODES, buildSystemPrompt } from '../lib/systemPrompts'
 import { streamChat } from '../api/claude'
 import { loadRepoContext, formatRepoContext } from '../api/github'
+import FileUploadZone from './FileUploadZone'
 
 interface Props {
   activeMode: ModeId
@@ -32,6 +33,7 @@ export default function ModePanel({
   const [isLoadingRepo, setIsLoadingRepo] = useState(false)
   const [repoError, setRepoError] = useState('')
   const [usage, setUsage] = useState<{ input: number; output: number } | null>(null)
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFiles>({ textFiles: [], images: [] })
   const abortRef = useRef(false)
 
   const mode = MODES.find((m) => m.id === activeMode)!
@@ -81,7 +83,13 @@ export default function ModePanel({
           setOutput(`❌ Error: ${msg}`)
         },
       },
+      {
+        textFiles: uploadedFiles.textFiles,
+        images:    uploadedFiles.images,
+      },
     )
+    // Clear images after sending (keep text files for follow-ups)
+    setUploadedFiles((prev) => ({ ...prev, images: [] }))
 
     setIsStreaming(false)
   }, [input, isStreaming, settings.apiKey, activeMode, role, repoFiles, onOpenSettings])
@@ -160,6 +168,13 @@ export default function ModePanel({
           {isLoadingRepo ? '⟳ Loading…' : repoLoaded ? '✓ Repo loaded' : '📁 Load Repo Context'}
         </button>
       </div>
+
+      {/* File upload zone */}
+      <FileUploadZone
+        files={uploadedFiles}
+        onChange={setUploadedFiles}
+        role={role}
+      />
 
       {repoError && (
         <div

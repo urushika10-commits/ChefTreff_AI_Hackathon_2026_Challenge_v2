@@ -7,7 +7,7 @@ const app = express()
 const PORT = process.env.PORT || 3001
 
 app.use(cors({ origin: 'http://localhost:3000' }))
-app.use(express.json({ limit: '4mb' }))
+app.use(express.json({ limit: '20mb' })) // larger limit for base64 images
 
 // Detect provider from key prefix
 function detectProvider(apiKey) {
@@ -20,9 +20,40 @@ function detectProvider(apiKey) {
 
 // Config for OpenAI-compatible providers
 const COMPAT_PROVIDERS = {
-  openai:  { baseURL: null,                                                                 model: 'gpt-4o' },
-  xai:     { baseURL: 'https://api.x.ai/v1',                                               model: 'grok-3' },
-  gemini:  { baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',           model: 'gemini-2.0-flash' },
+  openai:  { baseURL: null,                                                       model: 'gpt-4o' },
+  xai:     { baseURL: 'https://api.x.ai/v1',                                     model: 'grok-3' },
+  gemini:  { baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/', model: 'gemini-2.0-flash' },
+}
+
+// Append uploaded text files to system prompt as a context block
+function appendFilesToSystem(systemPrompt, textFiles) {
+  if (!textFiles || textFiles.length === 0) return systemPrompt
+  const ctx = textFiles
+    .map((f) => `### ${f.name}\n\`\`\`\n${f.content.slice(0, 60_000)}\n\`\`\``)
+    .join('\n\n')
+  return `${systemPrompt}\n\n## Uploaded Files Context\n${ctx}`
+}
+
+// Build content for the last user message with images attached
+function buildLastUserContent(text, images, provider) {
+  if (!images || images.length === 0) return text
+
+  if (provider === 'anthropic') {
+    const blocks = images.map((img) => ({
+      type: 'image',
+      source: { type: 'base64', media_type: img.mimeType, data: img.base64 },
+    }))
+    blocks.push({ type: 'text', text })
+    return blocks
+  }
+
+  // OpenAI-compatible format (OpenAI, xAI, Gemini compat)
+  const blocks = images.map((img) => ({
+    type: 'image_url',
+    image_url: { url: `data:${img.mimeType};base64,${img.base64}` },
+  }))
+  blocks.push({ type: 'text', text })
+  return blocks
 }
 
 // Health check
@@ -30,7 +61,13 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }))
 
 // Main chat endpoint — streams SSE back to the client
 app.post('/api/chat', async (req, res) => {
-  const { messages, systemPrompt, apiKey } = req.body
+  const {
+    messages,
+    systemPrompt: rawSystem,
+    apiKey,
+    textFiles = [],
+    images    = [],
+  } = req.body
 
   if (!apiKey) {
     return res.status(400).json({ error: 'API key required. Set it in Settings.' })
@@ -41,11 +78,18 @@ app.post('/api/chat', async (req, res) => {
   res.setHeader('Connection', 'keep-alive')
   res.flushHeaders()
 
-  const sendEvent = (data) => {
-    res.write(`data: ${JSON.stringify(data)}\n\n`)
-  }
+  const sendEvent = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`)
 
   const provider = detectProvider(apiKey)
+  const systemPrompt = appendFilesToSystem(rawSystem, textFiles)
+
+  // Attach images to the last user message
+  const apiMessages = messages.map((m, i) => {
+    if (i === messages.length - 1 && m.role === 'user') {
+      return { role: 'user', content: buildLastUserContent(m.content, images, provider) }
+    }
+    return m
+  })
 
   try {
     if (provider === 'anthropic') {
@@ -57,7 +101,7 @@ app.post('/api/chat', async (req, res) => {
         max_tokens: 4096,
         thinking: { type: 'adaptive' },
         system: systemPrompt,
-        messages,
+        messages: apiMessages,
       })
 
       let isInThinkingBlock = false
@@ -108,12 +152,13 @@ app.post('/api/chat', async (req, res) => {
 
       const openaiMessages = [
         { role: 'system', content: systemPrompt },
-        ...messages,
+        ...apiMessages,
       ]
 
       const stream = await client.chat.completions.create({
         model: cfg.model,
         stream: true,
+        stream_options: { include_usage: true },
         messages: openaiMessages,
       })
 
