@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
-import type { ModeId, Role, Settings, LoadedFile, Message } from '../lib/types'
+import type { ModeId, Role, Settings, LoadedFile, Message, UploadedFiles } from '../lib/types'
 import { buildSystemPrompt } from '../lib/systemPrompts'
 import { streamChat } from '../api/claude'
 import { formatRepoContext } from '../api/github'
 import { MODES } from '../lib/systemPrompts'
+import FileUploadZone from './FileUploadZone'
 
 interface Props {
   activeMode: ModeId
@@ -24,6 +25,7 @@ export default function ChatSidebar({
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFiles>({ textFiles: [], images: [] })
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -65,23 +67,34 @@ export default function ChatSidebar({
 
     let textAcc = ''
 
-    await streamChat(newMessages, systemPrompt, settings.apiKey, {
-      onText: (t) => {
-        textAcc += t
-        setMessages((prev) => {
-          const updated = [...prev]
-          updated[updated.length - 1] = { role: 'assistant', content: textAcc }
-          return updated
-        })
+    await streamChat(
+      newMessages,
+      systemPrompt,
+      settings.apiKey,
+      {
+        onText: (t) => {
+          textAcc += t
+          setMessages((prev) => {
+            const updated = [...prev]
+            updated[updated.length - 1] = { role: 'assistant', content: textAcc }
+            return updated
+          })
+        },
+        onError: (msg) => {
+          setMessages((prev) => {
+            const updated = [...prev]
+            updated[updated.length - 1] = { role: 'assistant', content: `❌ Error: ${msg}` }
+            return updated
+          })
+        },
       },
-      onError: (msg) => {
-        setMessages((prev) => {
-          const updated = [...prev]
-          updated[updated.length - 1] = { role: 'assistant', content: `❌ Error: ${msg}` }
-          return updated
-        })
+      {
+        textFiles: uploadedFiles.textFiles,
+        images:    uploadedFiles.images,
       },
-    })
+    )
+    // Clear images after send; keep text files for the conversation
+    setUploadedFiles((prev) => ({ ...prev, images: [] }))
 
     setIsStreaming(false)
   }, [input, isStreaming, messages, settings, activeMode, role, repoFiles, onOpenSettings])
@@ -318,8 +331,17 @@ export default function ChatSidebar({
           padding: '12px 16px',
           borderTop: '1px solid rgba(255,255,255,0.06)',
           flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
         }}
       >
+        <FileUploadZone
+          files={uploadedFiles}
+          onChange={setUploadedFiles}
+          role={role}
+          compact
+        />
         <div
           style={{
             display: 'flex',

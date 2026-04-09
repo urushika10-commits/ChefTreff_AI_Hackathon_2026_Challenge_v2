@@ -1,4 +1,4 @@
-import type { Message } from '../lib/types'
+import type { Message, UploadedTextFile, UploadedImage } from '../lib/types'
 
 export interface StreamCallbacks {
   onText: (text: string) => void
@@ -9,11 +9,17 @@ export interface StreamCallbacks {
   onError?: (message: string) => void
 }
 
+export interface ChatOptions {
+  textFiles?: UploadedTextFile[]
+  images?: UploadedImage[]
+}
+
 export async function streamChat(
   messages: Message[],
   systemPrompt: string,
   apiKey: string,
   callbacks: StreamCallbacks,
+  options?: ChatOptions,
 ): Promise<void> {
   const response = await fetch('/api/chat', {
     method: 'POST',
@@ -25,6 +31,8 @@ export async function streamChat(
         role: m.role,
         content: m.content,
       })),
+      textFiles: options?.textFiles ?? [],
+      images: options?.images ?? [],
     }),
   })
 

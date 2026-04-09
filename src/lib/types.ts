@@ -44,6 +44,23 @@ export interface Settings {
   repoName: string
 }
 
+export interface UploadedTextFile {
+  name: string
+  content: string
+}
+
+export interface UploadedImage {
+  name: string
+  mimeType: string
+  base64: string
+  previewUrl: string
+}
+
+export interface UploadedFiles {
+  textFiles: UploadedTextFile[]
+  images: UploadedImage[]
+}
+
 export interface AppState {
   role: Role | null
   activeMode: ModeId
