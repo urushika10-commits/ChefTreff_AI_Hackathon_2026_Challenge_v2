@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import ReactMarkdown from 'react-markdown'
 import type { ModeId, Role, Settings, LoadedFile, Message, UploadedFiles } from '../lib/types'
+import MarkdownRenderer from './MarkdownRenderer'
 import { buildSystemPrompt } from '../lib/systemPrompts'
 import { streamChat } from '../api/claude'
 import { formatRepoContext } from '../api/github'
@@ -292,11 +292,10 @@ export default function ChatSidebar({
               >
                 {msg.role === 'assistant' ? (
                   msg.content ? (
-                    <div
-                      className={`prose-custom ${isStreaming && i === messages.length - 1 ? 'streaming-cursor' : ''}`}
-                      style={{ fontSize: 13 }}
-                    >
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    <div className={isStreaming && i === messages.length - 1 ? 'streaming-cursor' : ''}>
+                      <MarkdownRenderer className="prose-custom prose-chat">
+                        {msg.content}
+                      </MarkdownRenderer>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', gap: 4, padding: '4px 2px' }}>

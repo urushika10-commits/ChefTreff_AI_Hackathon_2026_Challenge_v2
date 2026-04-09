@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
-import ReactMarkdown from 'react-markdown'
 import type { ModeId, Role, Settings, LoadedFile, UploadedFiles } from '../lib/types'
+import MarkdownRenderer from './MarkdownRenderer'
 import { MODES, buildSystemPrompt } from '../lib/systemPrompts'
 import { streamChat } from '../api/claude'
 import { loadRepoContext, formatRepoContext } from '../api/github'
@@ -321,15 +321,13 @@ export default function ModePanel({
               padding: '20px',
             }}
           >
-            <div className={`prose-custom ${isStreaming && !output ? '' : ''}`}>
-              {output ? (
-                <div className={isStreaming ? 'streaming-cursor' : ''}>
-                  <ReactMarkdown>{output}</ReactMarkdown>
-                </div>
-              ) : (
-                <p style={{ color: '#475569', fontSize: 13 }}>Generating…</p>
-              )}
-            </div>
+            {output ? (
+              <div className={isStreaming ? 'streaming-cursor' : ''}>
+                <MarkdownRenderer>{output}</MarkdownRenderer>
+              </div>
+            ) : (
+              <p style={{ color: '#475569', fontSize: 13 }}>Generating…</p>
+            )}
           </div>
 
           {output && !isStreaming && (

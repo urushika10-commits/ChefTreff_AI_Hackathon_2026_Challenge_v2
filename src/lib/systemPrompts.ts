@@ -74,6 +74,15 @@ const REPO_CONTEXT_HEADER = (repoContext: string) =>
     ? `\n\n---\n## Repository Context\nThe following files from the project repository are provided for reference:\n\n${repoContext}\n---\n`
     : ''
 
+// Appended to every prompt — ensures the AI writes LaTeX that KaTeX can render.
+const MATH_FORMATTING = `
+## Mathematical Notation
+Whenever you write a mathematical expression, formula, or equation, use LaTeX notation so it renders beautifully:
+- Inline expression (within a sentence): wrap with single dollar signs — e.g. $M = P \\cdot \\frac{r(1+r)^n}{(1+r)^n - 1}$
+- Standalone / display equation (on its own line): wrap with double dollar signs — e.g.
+$$APR = \\left(1 + \\frac{r}{n}\\right)^n - 1$$
+Never write math as plain text like "r^n" or "(1+r)^n" — always use the LaTeX form.`
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Role personas injected at the top of every prompt.
 // These define the communication contract the AI must honour throughout.
@@ -482,5 +491,5 @@ Specific technical limits, precision requirements, and regulatory constraints.${
     },
   }
 
-  return prompts[modeId][role]
+  return prompts[modeId][role] + MATH_FORMATTING
 }
