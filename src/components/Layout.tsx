@@ -1,10 +1,11 @@
-import { useState } from 'react'
-import type { AppState, ModeId, Settings, LoadedFile } from '../lib/types'
+import { useState, useCallback } from 'react'
+import type { AppState, ModeId, Settings, LoadedFile, LogEntry, LogCallback } from '../lib/types'
 import ModeSidebar from './ModeSidebar'
 import ModePanel from './ModePanel'
 import ChatSidebar from './ChatSidebar'
 import SettingsModal from './SettingsModal'
 import RepoBrowser from './RepoBrowser'
+import LoadLog from './LoadLog'
 
 interface Props {
   state: AppState
@@ -25,6 +26,15 @@ export default function Layout({
 }: Props) {
   const [showSettings, setShowSettings] = useState(!state.settings.apiKey)
   const [showBrowser, setShowBrowser] = useState(false)
+  const [showLog, setShowLog] = useState(false)
+  const [logs, setLogs] = useState<LogEntry[]>([])
+
+  const addLog = useCallback<LogCallback>((entry) => {
+    setLogs((prev) => [
+      { ...entry, id: crypto.randomUUID(), timestamp: new Date() },
+      ...prev,
+    ])
+  }, [])
 
   const role = state.role!
   const primary = role === 'business' ? '#3B82F6' : '#A855F7'
@@ -155,6 +165,46 @@ export default function Layout({
           </button>
         )}
 
+        {/* Load log button */}
+        <button
+          style={{
+            ...headerBtnStyle,
+            position: 'relative',
+            color: logs.some((l) => l.status === 'error') ? '#EF4444' : '#94A3B8',
+          }}
+          onClick={() => setShowLog(true)}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#F1F5F9' }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent'
+            e.currentTarget.style.color = logs.some((l) => l.status === 'error') ? '#EF4444' : '#94A3B8'
+          }}
+        >
+          📋 Log
+          {logs.length > 0 && (
+            <span
+              style={{
+                position: 'absolute',
+                top: -4,
+                right: -4,
+                minWidth: 16,
+                height: 16,
+                borderRadius: 8,
+                background: logs.some((l) => l.status === 'error') ? '#EF4444' : primary,
+                color: 'white',
+                fontSize: 9,
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0 4px',
+                lineHeight: 1,
+              }}
+            >
+              {logs.length > 99 ? '99+' : logs.length}
+            </span>
+          )}
+        </button>
+
         {/* No API key warning */}
         {!state.settings.apiKey && (
           <span style={{ fontSize: 12, color: '#F59E0B' }}>⚠️ No API key</span>
@@ -235,6 +285,7 @@ export default function Layout({
             repoLoaded={state.repoLoaded}
             onSetRepoContext={onSetRepoContext}
             onOpenSettings={() => setShowSettings(true)}
+            onLog={addLog}
           />
         </div>
 
@@ -246,6 +297,7 @@ export default function Layout({
             settings={state.settings}
             repoFiles={state.repoFiles}
             onOpenSettings={() => setShowSettings(true)}
+            onLog={addLog}
           />
         )}
       </div>
@@ -265,6 +317,16 @@ export default function Layout({
           alreadyLoaded={state.repoFiles.map((f) => f.path)}
           onLoad={(files) => onSetRepoContext(files, true)}
           onClose={() => setShowBrowser(false)}
+          onLog={addLog}
+        />
+      )}
+
+      {showLog && (
+        <LoadLog
+          logs={logs}
+          role={role}
+          onClear={() => setLogs([])}
+          onClose={() => setShowLog(false)}
         />
       )}
     </div>

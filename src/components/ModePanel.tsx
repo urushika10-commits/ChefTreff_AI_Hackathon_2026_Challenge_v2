@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
-import ReactMarkdown from 'react-markdown'
-import type { ModeId, Role, Settings, LoadedFile, UploadedFiles } from '../lib/types'
+import type { ModeId, Role, Settings, LoadedFile, UploadedFiles, LogCallback } from '../lib/types'
+import MarkdownRenderer from './MarkdownRenderer'
 import { MODES, buildSystemPrompt } from '../lib/systemPrompts'
 import { streamChat } from '../api/claude'
 import { loadRepoContext, formatRepoContext } from '../api/github'
@@ -14,6 +14,7 @@ interface Props {
   repoLoaded: boolean
   onSetRepoContext: (files: LoadedFile[], loaded: boolean) => void
   onOpenSettings: () => void
+  onLog?: LogCallback
 }
 
 export default function ModePanel({
@@ -24,6 +25,7 @@ export default function ModePanel({
   repoLoaded,
   onSetRepoContext,
   onOpenSettings,
+  onLog,
 }: Props) {
   const [input, setInput] = useState('')
   const [output, setOutput] = useState('')
@@ -106,6 +108,8 @@ export default function ModePanel({
         settings.repoOwner,
         settings.repoName,
         settings.githubToken,
+        50,
+        onLog,
       )
       onSetRepoContext(files, true)
     } catch (err) {
@@ -174,6 +178,7 @@ export default function ModePanel({
         files={uploadedFiles}
         onChange={setUploadedFiles}
         role={role}
+        onLog={onLog}
       />
 
       {repoError && (
@@ -321,15 +326,13 @@ export default function ModePanel({
               padding: '20px',
             }}
           >
-            <div className={`prose-custom ${isStreaming && !output ? '' : ''}`}>
-              {output ? (
-                <div className={isStreaming ? 'streaming-cursor' : ''}>
-                  <ReactMarkdown>{output}</ReactMarkdown>
-                </div>
-              ) : (
-                <p style={{ color: '#475569', fontSize: 13 }}>Generating…</p>
-              )}
-            </div>
+            {output ? (
+              <div className={isStreaming ? 'streaming-cursor' : ''}>
+                <MarkdownRenderer>{output}</MarkdownRenderer>
+              </div>
+            ) : (
+              <p style={{ color: '#475569', fontSize: 13 }}>Generating…</p>
+            )}
           </div>
 
           {output && !isStreaming && (

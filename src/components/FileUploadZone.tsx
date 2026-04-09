@@ -1,12 +1,13 @@
 import { useRef, useCallback, useState } from 'react'
 import JSZip from 'jszip'
-import type { UploadedFiles, UploadedImage, UploadedTextFile } from '../lib/types'
+import type { UploadedFiles, UploadedImage, UploadedTextFile, LogCallback } from '../lib/types'
 
 interface Props {
   files: UploadedFiles
   onChange: (files: UploadedFiles) => void
   role: 'business' | 'developer'
   compact?: boolean // smaller variant for chat sidebar
+  onLog?: LogCallback
 }
 
 const CODE_EXTS = new Set([
@@ -59,7 +60,7 @@ async function readAsDataUrl(file: File): Promise<string> {
   })
 }
 
-export default function FileUploadZone({ files, onChange, role, compact = false }: Props) {
+export default function FileUploadZone({ files, onChange, role, compact = false, onLog }: Props) {
   const [isDragging, setIsDragging] = useState(false)
   const [errors, setErrors] = useState<string[]>([])
   const [videoNote, setVideoNote] = useState(false)
@@ -84,16 +85,73 @@ export default function FileUploadZone({ files, onChange, role, compact = false 
           for (const [path, entry] of entries) {
             if (entry.dir) continue
             const name = path.split('/').pop() ?? path
-            if (!CODE_EXTS.has(ext(name))) continue
-            if (count >= 50) break // safety limit
+            if (!CODE_EXTS.has(ext(name))) {
+              onLog?.({
+                source: 'zip-extract',
+                filename: name,
+                path,
+                status: 'skipped',
+                plainExplanation: `Skipped — "${name}" is not a recognised code or text file type. Only source files are extracted from ZIPs.`,
+                technicalDetail: `Extension ".${ext(name)}" not in allowed list`,
+              })
+              continue
+            }
+            if (count >= 50) {
+              onLog?.({
+                source: 'zip-extract',
+                filename: name,
+                path,
+                status: 'skipped',
+                plainExplanation: 'Skipped — the 50-file limit per ZIP was reached. Remaining files were not extracted.',
+                technicalDetail: 'count >= 50 safety cap',
+              })
+              break
+            }
             const text = await entry.async('string')
-            if (text.length > MAX_TEXT_MB * 1024 * 1024) continue
+            if (text.length > MAX_TEXT_MB * 1024 * 1024) {
+              onLog?.({
+                source: 'zip-extract',
+                filename: name,
+                path,
+                status: 'skipped',
+                sizeBytes: text.length,
+                plainExplanation: `Skipped — "${name}" is too large (over ${MAX_TEXT_MB} MB). Very large files are excluded to avoid overloading the AI context.`,
+                technicalDetail: `Content length ${text.length} bytes > ${MAX_TEXT_MB * 1024 * 1024} bytes`,
+              })
+              continue
+            }
             newTextFiles.push({ name: path, content: text })
+            onLog?.({
+              source: 'zip-extract',
+              filename: name,
+              path,
+              status: 'success',
+              sizeBytes: text.length,
+              plainExplanation: `Extracted successfully from ZIP (${(text.length / 1024).toFixed(1)} KB).`,
+            })
             count++
           }
-          if (count === 0) newErrors.push(`${file.name}: no code files found inside`)
-        } catch {
+          if (count === 0) {
+            newErrors.push(`${file.name}: no code files found inside`)
+            onLog?.({
+              source: 'zip-extract',
+              filename: file.name,
+              status: 'warning',
+              sizeBytes: file.size,
+              plainExplanation: `The ZIP "${file.name}" was opened but contained no recognised source code files.`,
+              technicalDetail: 'Zero entries matched the allowed extension list',
+            })
+          }
+        } catch (e) {
           newErrors.push(`${file.name}: failed to extract ZIP`)
+          onLog?.({
+            source: 'zip-extract',
+            filename: file.name,
+            status: 'error',
+            sizeBytes: file.size,
+            plainExplanation: `Could not open "${file.name}". The file may be corrupted, password-protected, or not a valid ZIP.`,
+            technicalDetail: (e as Error)?.message ?? 'JSZip.loadAsync failed',
+          })
         }
         continue
       }
@@ -102,17 +160,40 @@ export default function FileUploadZone({ files, onChange, role, compact = false 
       if (IMAGE_TYPES.has(file.type)) {
         if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
           newErrors.push(`${file.name}: image too large (max ${MAX_IMAGE_MB} MB)`)
+          onLog?.({
+            source: 'file-upload',
+            filename: file.name,
+            status: 'error',
+            sizeBytes: file.size,
+            plainExplanation: `Image "${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). The maximum allowed size is ${MAX_IMAGE_MB} MB.`,
+            technicalDetail: `file.size ${file.size} > ${MAX_IMAGE_MB * 1024 * 1024} bytes`,
+          })
           continue
         }
         const base64 = await readAsBase64(file)
         const previewUrl = await readAsDataUrl(file)
         newImages.push({ name: file.name, mimeType: file.type, base64, previewUrl })
+        onLog?.({
+          source: 'file-upload',
+          filename: file.name,
+          status: 'success',
+          sizeBytes: file.size,
+          plainExplanation: `Image "${file.name}" uploaded and ready to send with your next message.`,
+        })
         continue
       }
 
       // ── Video ─────────────────────────────────────────────────────────────
       if (VIDEO_TYPES.has(file.type)) {
         setVideoNote(true)
+        onLog?.({
+          source: 'file-upload',
+          filename: file.name,
+          status: 'skipped',
+          sizeBytes: file.size,
+          plainExplanation: `Video files are only supported when using a Google Gemini API key (starts with "AIza…"). "${file.name}" was not attached.`,
+          technicalDetail: `MIME type ${file.type} requires Gemini vision endpoint`,
+        })
         continue
       }
 
@@ -120,14 +201,37 @@ export default function FileUploadZone({ files, onChange, role, compact = false 
       if (CODE_EXTS.has(ext(file.name)) || file.type.startsWith('text/')) {
         if (file.size > MAX_TEXT_MB * 1024 * 1024) {
           newErrors.push(`${file.name}: file too large (max ${MAX_TEXT_MB} MB)`)
+          onLog?.({
+            source: 'file-upload',
+            filename: file.name,
+            status: 'error',
+            sizeBytes: file.size,
+            plainExplanation: `"${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Text files must be under ${MAX_TEXT_MB} MB.`,
+            technicalDetail: `file.size ${file.size} > ${MAX_TEXT_MB * 1024 * 1024} bytes`,
+          })
           continue
         }
         const text = await readAsText(file)
         newTextFiles.push({ name: file.name, content: text })
+        onLog?.({
+          source: 'file-upload',
+          filename: file.name,
+          status: 'success',
+          sizeBytes: file.size,
+          plainExplanation: `"${file.name}" uploaded (${(file.size / 1024).toFixed(1)} KB, ${text.split('\n').length} lines) and added to context.`,
+        })
         continue
       }
 
       newErrors.push(`${file.name}: unsupported file type`)
+      onLog?.({
+        source: 'file-upload',
+        filename: file.name,
+        status: 'error',
+        sizeBytes: file.size,
+        plainExplanation: `"${file.name}" has a file type that isn't supported. Try uploading source code, images, or ZIP archives of a project.`,
+        technicalDetail: `MIME type "${file.type}", extension ".${ext(file.name)}" not recognised`,
+      })
     }
 
     setErrors(newErrors)
@@ -135,7 +239,7 @@ export default function FileUploadZone({ files, onChange, role, compact = false 
       textFiles: [...files.textFiles, ...newTextFiles],
       images:    [...files.images,    ...newImages],
     })
-  }, [files, onChange])
+  }, [files, onChange, onLog])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
