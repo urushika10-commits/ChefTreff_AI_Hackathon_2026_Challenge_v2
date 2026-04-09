@@ -28,18 +28,16 @@ export default function ChatSidebar({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const mode = MODES.find((m) => m.id === activeMode)!
-  const accentBg = role === 'business' ? 'bg-amber-500' : 'bg-indigo-600'
-  const accentHover = role === 'business' ? 'hover:bg-amber-400' : 'hover:bg-indigo-500'
-  const userBubble =
-    role === 'business'
-      ? 'bg-amber-500/20 border-amber-500/30'
-      : 'bg-indigo-500/20 border-indigo-500/30'
+
+  const primary = role === 'business' ? '#3B82F6' : '#A855F7'
+  const surface = role === 'business' ? '#0D1B35' : '#120820'
+  const border = role === 'business' ? 'rgba(59,130,246,0.2)' : 'rgba(168,85,247,0.2)'
+  const aiBubbleBg = role === 'business' ? 'rgba(59,130,246,0.08)' : 'rgba(168,85,247,0.08)'
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Auto-resize textarea
   useEffect(() => {
     const ta = textareaRef.current
     if (!ta) return
@@ -60,7 +58,6 @@ export default function ChatSidebar({
     setInput('')
     setIsStreaming(true)
 
-    // Add placeholder assistant message
     setMessages((prev) => [...prev, { role: 'assistant', content: '' }])
 
     const repoContext = repoFiles.length > 0 ? formatRepoContext(repoFiles) : ''
@@ -68,31 +65,23 @@ export default function ChatSidebar({
 
     let textAcc = ''
 
-    await streamChat(
-      newMessages,
-      systemPrompt,
-      settings.apiKey,
-      {
-        onText: (t) => {
-          textAcc += t
-          setMessages((prev) => {
-            const updated = [...prev]
-            updated[updated.length - 1] = { role: 'assistant', content: textAcc }
-            return updated
-          })
-        },
-        onError: (msg) => {
-          setMessages((prev) => {
-            const updated = [...prev]
-            updated[updated.length - 1] = {
-              role: 'assistant',
-              content: `❌ Error: ${msg}`,
-            }
-            return updated
-          })
-        },
+    await streamChat(newMessages, systemPrompt, settings.apiKey, {
+      onText: (t) => {
+        textAcc += t
+        setMessages((prev) => {
+          const updated = [...prev]
+          updated[updated.length - 1] = { role: 'assistant', content: textAcc }
+          return updated
+        })
       },
-    )
+      onError: (msg) => {
+        setMessages((prev) => {
+          const updated = [...prev]
+          updated[updated.length - 1] = { role: 'assistant', content: `❌ Error: ${msg}` }
+          return updated
+        })
+      },
+    })
 
     setIsStreaming(false)
   }, [input, isStreaming, messages, settings, activeMode, role, repoFiles, onOpenSettings])
@@ -136,72 +125,182 @@ export default function ChatSidebar({
   const starters = STARTER_PROMPTS[activeMode] || []
 
   return (
-    <aside className="w-72 shrink-0 bg-slate-900 border-l border-slate-800 flex flex-col">
+    <aside
+      style={{
+        width: 380,
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        borderLeft: '1px solid rgba(255,255,255,0.06)',
+        background: surface,
+      }}
+    >
       {/* Header */}
-      <div className="shrink-0 px-4 py-3 border-b border-slate-800 flex items-center gap-2">
-        <span className="text-base">{mode.icon}</span>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white truncate">Quick Chat</p>
-          <p className="text-[11px] text-slate-500 truncate">{mode.label} mode</p>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '14px 16px',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 18 }}>🤖</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#F1F5F9' }}>AI Assistant</div>
+            <div style={{ fontSize: 11, color: '#475569' }}>{mode.label} mode</div>
+          </div>
         </div>
         {messages.length > 0 && (
           <button
             onClick={() => setMessages([])}
-            className="text-xs text-slate-600 hover:text-slate-400 px-1.5 py-0.5 rounded hover:bg-slate-800 transition-colors"
-            title="Clear chat"
+            style={{
+              padding: '5px 10px',
+              borderRadius: 8,
+              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'transparent',
+              color: '#475569',
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: 11,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = '#94A3B8'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = '#475569'; e.currentTarget.style.background = 'transparent' }}
           >
-            Clear
+            Clear chat
           </button>
         )}
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: 16,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 14,
+          scrollBehavior: 'smooth',
+        }}
+      >
         {messages.length === 0 ? (
-          <div className="space-y-2">
-            <p className="text-xs text-slate-500 text-center pt-4 pb-2">
-              Ask a quick question in {mode.label} mode
-            </p>
-            {starters.map((s) => (
-              <button
-                key={s}
-                onClick={() => { setInput(s) }}
-                className="w-full text-left text-xs text-slate-400 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 rounded-lg px-3 py-2 transition-colors leading-relaxed"
-              >
-                {s}
-              </button>
-            ))}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              textAlign: 'center',
+              color: '#475569',
+              gap: 10,
+            }}
+          >
+            <div style={{ fontSize: 36, opacity: 0.6 }}>🤖</div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: '#94A3B8' }}>Ready to help</div>
+            <div style={{ fontSize: 12, lineHeight: 1.5, maxWidth: 220, color: '#475569' }}>
+              Ask anything about the project in {mode.label} mode
+            </div>
+            {starters.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', marginTop: 8 }}>
+                {starters.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setInput(s)}
+                    style={{
+                      textAlign: 'left',
+                      fontSize: 12,
+                      color: '#94A3B8',
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      borderRadius: 8,
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      fontFamily: "'Inter', system-ui, sans-serif",
+                      lineHeight: 1.5,
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#F1F5F9' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = '#94A3B8' }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           messages.map((msg, i) => (
             <div
               key={i}
-              className={`animate-fade-in ${msg.role === 'user' ? 'flex justify-end' : 'flex justify-start'}`}
+              className="animate-fade-in"
+              style={{
+                display: 'flex',
+                gap: 10,
+                flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
+              }}
             >
+              {/* Avatar */}
               <div
-                className={`
-                  max-w-[88%] rounded-2xl px-3 py-2 text-xs leading-relaxed border
-                  ${msg.role === 'user'
-                    ? `${userBubble} text-slate-200 rounded-br-sm`
-                    : 'bg-slate-800 border-slate-700 text-slate-300 rounded-bl-sm'
-                  }
-                  ${isStreaming && i === messages.length - 1 && msg.role === 'assistant' && !msg.content
-                    ? 'animate-pulse'
-                    : ''
-                  }
-                `}
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 14,
+                  flexShrink: 0,
+                  marginTop: 2,
+                  background: msg.role === 'user'
+                    ? 'rgba(255,255,255,0.1)'
+                    : `${primary}33`,
+                }}
+              >
+                {msg.role === 'user' ? '👤' : '🤖'}
+              </div>
+
+              {/* Bubble */}
+              <div
+                style={{
+                  maxWidth: '82%',
+                  padding: '10px 14px',
+                  borderRadius: msg.role === 'user' ? '12px 4px 12px 12px' : '4px 12px 12px 12px',
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                  background: msg.role === 'user' ? 'rgba(255,255,255,0.07)' : aiBubbleBg,
+                  border: msg.role === 'user' ? 'none' : `1px solid ${border}`,
+                  color: '#F1F5F9',
+                }}
               >
                 {msg.role === 'assistant' ? (
                   msg.content ? (
                     <div
-                      className={`prose-custom text-xs ${
-                        isStreaming && i === messages.length - 1 ? 'streaming-cursor' : ''
-                      }`}
+                      className={`prose-custom ${isStreaming && i === messages.length - 1 ? 'streaming-cursor' : ''}`}
+                      style={{ fontSize: 13 }}
                     >
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
                     </div>
                   ) : (
-                    <span className="text-slate-500">Thinking…</span>
+                    <div style={{ display: 'flex', gap: 4, padding: '4px 2px' }}>
+                      {[0, 150, 300].map((delay) => (
+                        <span
+                          key={delay}
+                          style={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: '50%',
+                            background: '#475569',
+                            display: 'inline-block',
+                            animation: `bounce 1.2s infinite ${delay}ms`,
+                          }}
+                        />
+                      ))}
+                    </div>
                   )
                 ) : (
                   <p>{msg.content}</p>
@@ -214,33 +313,73 @@ export default function ChatSidebar({
       </div>
 
       {/* Input */}
-      <div className="shrink-0 p-3 border-t border-slate-800">
-        <div className="flex gap-2 items-end">
+      <div
+        style={{
+          padding: '12px 16px',
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-end',
+            gap: 10,
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 12,
+            padding: '8px 12px',
+            transition: 'border-color 0.2s ease',
+          }}
+          onFocusCapture={(e) => { e.currentTarget.style.borderColor = border }}
+          onBlurCapture={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
+        >
           <textarea
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask a question… (Enter to send)"
+            placeholder="Ask anything about the project…"
             rows={1}
             disabled={isStreaming}
-            className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 resize-none overflow-hidden leading-relaxed disabled:opacity-50"
+            style={{
+              flex: 1,
+              background: 'none',
+              border: 'none',
+              outline: 'none',
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: 13,
+              color: '#F1F5F9',
+              resize: 'none',
+              lineHeight: 1.5,
+              maxHeight: 120,
+              minHeight: 20,
+            }}
           />
           <button
             onClick={handleSend}
             disabled={isStreaming || !input.trim()}
-            className={`
-              shrink-0 w-8 h-8 rounded-xl flex items-center justify-center
-              ${accentBg} ${accentHover}
-              disabled:bg-slate-700 disabled:text-slate-500
-              text-white text-sm transition-all active:scale-95
-            `}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              border: 'none',
+              background: isStreaming || !input.trim() ? 'rgba(255,255,255,0.06)' : primary,
+              color: isStreaming || !input.trim() ? '#475569' : 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: isStreaming || !input.trim() ? 'not-allowed' : 'pointer',
+              flexShrink: 0,
+              fontSize: 15,
+              transition: 'all 0.2s ease',
+            }}
           >
             {isStreaming ? '⟳' : '↑'}
           </button>
         </div>
-        <p className="text-[10px] text-slate-700 mt-1.5 text-center">
-          Shift+Enter for new line
+        <p style={{ fontSize: 10, color: '#475569', textAlign: 'center', marginTop: 8 }}>
+          Enter to send · Shift+Enter for new line
         </p>
       </div>
     </aside>

@@ -8,19 +8,14 @@ interface Props {
 }
 
 export default function ModeSidebar({ activeMode, role, onSelectMode }: Props) {
-  const accent = role === 'business' ? 'amber' : 'indigo'
+  const primary = role === 'business' ? '#3B82F6' : '#A855F7'
+  const cardBg = role === 'business' ? '#0F2040' : '#170A2E'
+  const tagBg = role === 'business' ? 'rgba(59,130,246,0.12)' : 'rgba(168,85,247,0.12)'
+  const tagColor = role === 'business' ? '#93C5FD' : '#D8B4FE'
+  const activeShadow = role === 'business'
+    ? '0 0 0 1px rgba(59,130,246,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+    : '0 0 0 1px rgba(168,85,247,0.3), 0 8px 24px rgba(0,0,0,0.3)'
 
-  const activeClass =
-    role === 'business'
-      ? 'bg-amber-500/15 border-amber-400/60 text-amber-300'
-      : 'bg-indigo-500/15 border-indigo-400/60 text-indigo-300'
-
-  const primaryBadge =
-    role === 'business'
-      ? 'bg-amber-500/20 text-amber-400 text-[10px]'
-      : 'bg-indigo-500/20 text-indigo-400 text-[10px]'
-
-  // Sort: primary roles for this user first
   const sorted = [...MODES].sort((a, b) => {
     const aPrimary = a.primaryRoles.includes(role) ? 0 : 1
     const bPrimary = b.primaryRoles.includes(role) ? 0 : 1
@@ -28,54 +23,79 @@ export default function ModeSidebar({ activeMode, role, onSelectMode }: Props) {
   })
 
   return (
-    <aside className="w-56 shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col overflow-y-auto">
-      <div className="p-3 border-b border-slate-800">
-        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Modes</p>
-      </div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+      {sorted.map((mode) => {
+        const isActive = mode.id === activeMode
+        const isPrimary = mode.primaryRoles.includes(role)
 
-      <nav className="flex-1 p-2 space-y-1">
-        {sorted.map((mode) => {
-          const isActive = mode.id === activeMode
-          const isPrimary = mode.primaryRoles.includes(role)
+        return (
+          <div
+            key={mode.id}
+            onClick={() => onSelectMode(mode.id)}
+            style={{
+              padding: 20,
+              borderRadius: 12,
+              border: `1px solid ${isActive ? primary : 'rgba(255,255,255,0.06)'}`,
+              background: cardBg,
+              cursor: 'pointer',
+              position: 'relative',
+              overflow: 'hidden',
+              transition: 'all 0.25s ease',
+              boxShadow: isActive ? activeShadow : 'none',
+            }}
+            onMouseEnter={(e) => {
+              if (!isActive) {
+                e.currentTarget.style.borderColor = primary
+                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.boxShadow = activeShadow
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isActive) {
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+                e.currentTarget.style.transform = 'none'
+                e.currentTarget.style.boxShadow = 'none'
+              }
+            }}
+          >
+            {/* Subtle gradient shimmer */}
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: 12,
+                background: 'linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.02))',
+                pointerEvents: 'none',
+              }}
+            />
 
-          return (
-            <button
-              key={mode.id}
-              onClick={() => onSelectMode(mode.id)}
-              className={`
-                w-full text-left rounded-lg border px-3 py-2.5 transition-all
-                ${isActive
-                  ? `${activeClass} border`
-                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-                }
-              `}
+            <span style={{ fontSize: 24, marginBottom: 10, display: 'block' }}>{mode.icon}</span>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#F1F5F9', marginBottom: 6 }}>
+              {mode.label}
+              {isPrimary && (
+                <span style={{ marginLeft: 6, color: primary, fontSize: 12 }}>★</span>
+              )}
+            </div>
+            <p style={{ fontSize: 12, color: '#94A3B8', lineHeight: 1.5 }}>
+              {mode.description.split('—')[0].trim()}
+            </p>
+            <span
+              style={{
+                display: 'inline-block',
+                marginTop: 10,
+                padding: '2px 8px',
+                borderRadius: 100,
+                fontSize: 10,
+                fontWeight: 600,
+                background: tagBg,
+                color: tagColor,
+              }}
             >
-              <div className="flex items-center gap-2">
-                <span className="text-base">{mode.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-medium truncate">{mode.label}</span>
-                    {isPrimary && (
-                      <span className={`shrink-0 px-1 py-0.5 rounded font-medium ${primaryBadge}`}>
-                        ★
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-slate-500 truncate mt-0.5 leading-tight">
-                    {mode.description.split('—')[0].trim()}
-                  </p>
-                </div>
-              </div>
-            </button>
-          )
-        })}
-      </nav>
-
-      <div className="p-3 border-t border-slate-800">
-        <div className={`text-[11px] text-center px-2 py-1 rounded-md font-medium ${primaryBadge}`}>
-          ★ = Recommended for {role === 'business' ? 'Business' : 'Dev'}
-        </div>
-      </div>
-    </aside>
+              {isPrimary ? 'Recommended' : 'Available'}
+            </span>
+          </div>
+        )
+      })}
+    </div>
   )
 }
