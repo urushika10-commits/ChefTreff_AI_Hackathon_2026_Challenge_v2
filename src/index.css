@@ -244,3 +244,15 @@
   0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
   40% { transform: translateY(-6px); opacity: 1; }
 }
+
+/* ── Load Toast ─────────────────────────────────────────────────────────── */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes shrinkWidth {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+.toast-enter { animation: slideInRight 0.22s ease-out; }
+.toast-row-enter { animation: fadeInUp 0.15s ease-out; }
