@@ -6,6 +6,7 @@ import ChatSidebar from './ChatSidebar'
 import SettingsModal from './SettingsModal'
 import RepoBrowser from './RepoBrowser'
 import LoadLog from './LoadLog'
+import LoadToast from './LoadToast'
 
 interface Props {
   state: AppState
@@ -325,10 +326,14 @@ export default function Layout({
         <LoadLog
           logs={logs}
           role={role}
+          settings={state.settings}
           onClear={() => setLogs([])}
           onClose={() => setShowLog(false)}
         />
       )}
+
+      {/* Live loading toast — always rendered, self-shows/hides */}
+      <LoadToast logs={logs} role={role} />
     </div>
   )
 }
