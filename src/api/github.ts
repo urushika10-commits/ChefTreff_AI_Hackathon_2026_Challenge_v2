@@ -118,15 +118,15 @@ export async function loadRepoContext(
 ): Promise<LoadedFile[]> {
   const loaded: LoadedFile[] = []
 
-  async function traverse(path: string, depth: number) {
-    if (loaded.length >= maxFiles || depth > 5) return
+  async function traverse(path: string) {
+    if (loaded.length >= maxFiles) return
 
     const items = await fetchRepoTree(owner, repo, githubToken, path)
 
     for (const item of items) {
       if (loaded.length >= maxFiles) break
       if (item.type === 'dir') {
-        await traverse(item.path, depth + 1)
+        await traverse(item.path)
       } else if (item.type === 'file' && (item.size ?? 0) < 100_000) {
         try {
           const content = await fetchFileContent(owner, repo, item.path, githubToken)
@@ -138,7 +138,7 @@ export async function loadRepoContext(
     }
   }
 
-  await traverse('', 0)
+  await traverse('')
   return loaded
 }
 
