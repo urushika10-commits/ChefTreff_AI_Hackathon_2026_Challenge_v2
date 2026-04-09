@@ -52,19 +52,74 @@ export async function fetchFileContent(
 }
 
 /**
+ * Fetches ALL items at a path without source-file filtering — used by the
+ * file browser so every file/folder is visible regardless of extension.
+ * Folders first, then files, both alphabetically.
+ */
+export async function fetchDirContents(
+  owner: string,
+  repo: string,
+  githubToken: string,
+  path = '',
+): Promise<RepoFile[]> {
+  const params = new URLSearchParams({ owner, repo, path })
+  if (githubToken) params.set('githubToken', githubToken)
+
+  const res = await fetch(`/api/github/repo?${params}`)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `GitHub API error ${res.status}`)
+  }
+
+  const items = await res.json()
+  return (items as Array<{ name: string; path: string; type: string; size?: number }>)
+    .map((item) => ({
+      name: item.name,
+      path: item.path,
+      type: item.type as 'file' | 'dir',
+      size: item.size,
+    }))
+    .sort((a, b) => {
+      if (a.type !== b.type) return a.type === 'dir' ? -1 : 1
+      return a.name.localeCompare(b.name)
+    })
+}
+
+/**
+ * Fetch a specific set of file paths chosen by the user in the browser.
+ * Failed fetches are silently skipped.
+ */
+export async function loadSelectedFiles(
+  owner: string,
+  repo: string,
+  paths: string[],
+  githubToken: string,
+): Promise<LoadedFile[]> {
+  const results = await Promise.allSettled(
+    paths.map(async (path) => {
+      const content = await fetchFileContent(owner, repo, path, githubToken)
+      return { path, content }
+    }),
+  )
+  return results
+    .filter((r): r is PromiseFulfilledResult<LoadedFile> => r.status === 'fulfilled')
+    .map((r) => r.value)
+}
+
+/**
  * Recursively fetches all source files from a repo (up to maxFiles).
- * Returns files formatted as context strings for Claude.
+ * Used by the "Load Repo Context" quick-load button.
  */
 export async function loadRepoContext(
   owner: string,
   repo: string,
   githubToken: string,
-  maxFiles = 20,
+  maxFiles = 50,
 ): Promise<LoadedFile[]> {
   const loaded: LoadedFile[] = []
 
   async function traverse(path: string, depth: number) {
-    if (loaded.length >= maxFiles || depth > 3) return
+    if (loaded.length >= maxFiles || depth > 5) return
 
     const items = await fetchRepoTree(owner, repo, githubToken, path)
 
@@ -72,7 +127,7 @@ export async function loadRepoContext(
       if (loaded.length >= maxFiles) break
       if (item.type === 'dir') {
         await traverse(item.path, depth + 1)
-      } else if (item.type === 'file' && (item.size ?? 0) < 50_000) {
+      } else if (item.type === 'file' && (item.size ?? 0) < 100_000) {
         try {
           const content = await fetchFileContent(owner, repo, item.path, githubToken)
           loaded.push({ path: item.path, content })

@@ -4,6 +4,7 @@ import ModeSidebar from './ModeSidebar'
 import ModePanel from './ModePanel'
 import ChatSidebar from './ChatSidebar'
 import SettingsModal from './SettingsModal'
+import RepoBrowser from './RepoBrowser'
 
 interface Props {
   state: AppState
@@ -23,6 +24,7 @@ export default function Layout({
   onChangeRole,
 }: Props) {
   const [showSettings, setShowSettings] = useState(!state.settings.apiKey)
+  const [showBrowser, setShowBrowser] = useState(false)
 
   const role = state.role!
   const primary = role === 'business' ? '#3B82F6' : '#A855F7'
@@ -141,6 +143,18 @@ export default function Layout({
           </div>
         )}
 
+        {/* Browse repo button — only when a repo is configured */}
+        {repoName && (
+          <button
+            style={{ ...headerBtnStyle, color: state.repoLoaded ? primary : '#94A3B8' }}
+            onClick={() => setShowBrowser(true)}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#F1F5F9' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = state.repoLoaded ? primary : '#94A3B8' }}
+          >
+            🗂 Browse
+          </button>
+        )}
+
         {/* No API key warning */}
         {!state.settings.apiKey && (
           <span style={{ fontSize: 12, color: '#F59E0B' }}>⚠️ No API key</span>
@@ -241,6 +255,16 @@ export default function Layout({
           settings={state.settings}
           onSave={onSaveSettings}
           onClose={() => setShowSettings(false)}
+        />
+      )}
+
+      {showBrowser && state.settings.repoOwner && state.settings.repoName && (
+        <RepoBrowser
+          settings={state.settings}
+          role={role}
+          alreadyLoaded={state.repoFiles.map((f) => f.path)}
+          onLoad={(files) => onSetRepoContext(files, true)}
+          onClose={() => setShowBrowser(false)}
         />
       )}
     </div>
