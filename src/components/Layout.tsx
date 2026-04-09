@@ -87,7 +87,7 @@ export default function Layout({
             flexShrink: 0,
           }}
         >
-          BridgeAI
+          DualMind AI
         </span>
 
         {/* Divider */}

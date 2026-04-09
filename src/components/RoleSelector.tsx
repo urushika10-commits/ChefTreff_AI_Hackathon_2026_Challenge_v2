@@ -48,7 +48,7 @@ export default function RoleSelector({ onSelectRole }: Props) {
             backgroundClip: 'text',
           }}
         >
-          BridgeAI
+          DualMind AI
         </div>
         <div style={{ fontSize: 18, color: '#94A3B8', fontWeight: 400, marginTop: 10 }}>
           AI-powered collaboration between Business &amp; Technology

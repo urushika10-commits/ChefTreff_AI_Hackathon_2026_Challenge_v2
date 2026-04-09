@@ -148,7 +148,7 @@ app.get('/api/github/repo', async (req, res) => {
   const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`
   const headers = {
     Accept: 'application/vnd.github.v3+json',
-    'User-Agent': 'BridgeAI-App',
+    'User-Agent': 'DualMind-AI-App',
   }
   if (githubToken) headers['Authorization'] = `Bearer ${githubToken}`
 
@@ -173,7 +173,7 @@ app.get('/api/github/file', async (req, res) => {
   const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`
   const headers = {
     Accept: 'application/vnd.github.v3.raw',
-    'User-Agent': 'BridgeAI-App',
+    'User-Agent': 'DualMind-AI-App',
   }
   if (githubToken) headers['Authorization'] = `Bearer ${githubToken}`
 
@@ -188,5 +188,5 @@ app.get('/api/github/file', async (req, res) => {
 })
 
 app.listen(PORT, () => {
-  console.log(`🚀 BridgeAI server running on http://localhost:${PORT}`)
+  console.log(`🚀 DualMind AI server running on http://localhost:${PORT}`)
 })
