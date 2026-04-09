@@ -25,17 +25,11 @@ export default function RoleSelector({ onSelectRole }: Props) {
       {/* Hero */}
       <div style={{ textAlign: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 20 }}>
-          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-            <rect width="48" height="48" rx="12" fill="url(#logoGrad)" />
-            <path d="M14 18h8m0 0V14m0 4 8 4m0 0v4m0-4 8 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M14 30h8m0 0v4m0-4 8-4m0 0v-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
-            <defs>
-              <linearGradient id="logoGrad" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#3B82F6" />
-                <stop offset="1" stopColor="#A855F7" />
-              </linearGradient>
-            </defs>
-          </svg>
+          <img
+            src="/dualmind-logo.svg"
+            alt="DualMind AI Logo"
+            style={{ width: 72, height: 58, objectFit: 'contain' }}
+          />
         </div>
         <div
           style={{
@@ -51,7 +45,7 @@ export default function RoleSelector({ onSelectRole }: Props) {
           DualMind AI
         </div>
         <div style={{ fontSize: 18, color: '#94A3B8', fontWeight: 400, marginTop: 10 }}>
-          AI-powered collaboration between Business &amp; Technology
+          Two perspectives, one intelligent workflow
         </div>
       </div>
 
@@ -94,7 +88,7 @@ export default function RoleSelector({ onSelectRole }: Props) {
       </div>
 
       <div style={{ fontSize: 13, color: '#475569' }}>
-        Loan Calculator Project · Powered by Claude Opus 4.6
+        Powered by Claude Sonnet 4.6
       </div>
     </div>
   )

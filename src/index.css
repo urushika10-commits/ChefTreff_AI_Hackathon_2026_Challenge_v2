@@ -256,3 +256,9 @@
 }
 .toast-enter { animation: slideInRight 0.22s ease-out; }
 .toast-row-enter { animation: fadeInUp 0.15s ease-out; }
+
+/* ── Test runner slide-in ───────────────────────────────────────────────── */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

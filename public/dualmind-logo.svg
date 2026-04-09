@@ -1,0 +1,29 @@
+<svg width="200" height="160" viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- LEFT HEAD - Blue - profile facing left (outward) -->
+  <path d="M 100 135 L 100 118 C 94 108 86 100 80 90 C 74 80 72 68 76 56 C 78 48 84 40 84 34 C 84 26 78 18 68 14 C 56 10 42 14 34 24 C 24 36 20 52 22 68 C 24 82 30 96 40 108 C 48 118 58 128 70 134 Z" fill="#3B82F6"/>
+
+  <!-- RIGHT HEAD - Purple - profile facing right (outward) -->
+  <path d="M 100 135 L 100 118 C 106 108 114 100 120 90 C 126 80 128 68 124 56 C 122 48 116 40 116 34 C 116 26 122 18 132 14 C 144 10 158 14 166 24 C 176 36 180 52 178 68 C 176 82 170 96 160 108 C 152 118 142 128 130 134 Z" fill="#A855F7"/>
+
+  <!-- Circuit elements LEFT side (3 nodes + connecting lines) -->
+  <line x1="22" y1="55" x2="4" y2="52" stroke="#93C5FD" stroke-width="2" stroke-linecap="round"/>
+  <line x1="4" y1="52" x2="2" y2="70" stroke="#93C5FD" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="2" y1="70" x2="6" y2="86" stroke="#93C5FD" stroke-width="1.5" stroke-linecap="round"/>
+  <circle cx="4" cy="52" r="4" fill="#93C5FD"/>
+  <circle cx="2" cy="70" r="3.5" fill="#93C5FD" opacity="0.85"/>
+  <circle cx="6" cy="86" r="3" fill="#93C5FD" opacity="0.7"/>
+
+  <!-- Circuit elements RIGHT side (mirror) -->
+  <line x1="178" y1="55" x2="196" y2="52" stroke="#D8B4FE" stroke-width="2" stroke-linecap="round"/>
+  <line x1="196" y1="52" x2="198" y2="70" stroke="#D8B4FE" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="198" y1="70" x2="194" y2="86" stroke="#D8B4FE" stroke-width="1.5" stroke-linecap="round"/>
+  <circle cx="196" cy="52" r="4" fill="#D8B4FE"/>
+  <circle cx="198" cy="70" r="3.5" fill="#D8B4FE" opacity="0.85"/>
+  <circle cx="194" cy="86" r="3" fill="#D8B4FE" opacity="0.7"/>
+
+  <!-- Center M / checkmark (white) connecting both heads -->
+  <path d="M 78 58 L 90 84 L 100 66 L 110 84 L 122 58" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Small circuit dots at tips of the M -->
+  <circle cx="78" cy="58" r="4.5" fill="white"/>
+  <circle cx="122" cy="58" r="4.5" fill="white"/>
+</svg>

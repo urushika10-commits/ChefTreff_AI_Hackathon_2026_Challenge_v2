@@ -13,8 +13,8 @@ export default function ModeSidebar({ activeMode, role, onSelectMode }: Props) {
   const tagBg = role === 'business' ? 'rgba(59,130,246,0.12)' : 'rgba(168,85,247,0.12)'
   const tagColor = role === 'business' ? '#93C5FD' : '#D8B4FE'
   const activeShadow = role === 'business'
-    ? '0 0 0 1px rgba(59,130,246,0.3), 0 8px 24px rgba(0,0,0,0.3)'
-    : '0 0 0 1px rgba(168,85,247,0.3), 0 8px 24px rgba(0,0,0,0.3)'
+    ? '0 0 0 1px rgba(59,130,246,0.3), 0 4px 16px rgba(0,0,0,0.3)'
+    : '0 0 0 1px rgba(168,85,247,0.3), 0 4px 16px rgba(0,0,0,0.3)'
 
   const sorted = [...MODES].sort((a, b) => {
     const aPrimary = a.primaryRoles.includes(role) ? 0 : 1
@@ -23,7 +23,7 @@ export default function ModeSidebar({ activeMode, role, onSelectMode }: Props) {
   })
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {sorted.map((mode) => {
         const isActive = mode.id === activeMode
         const isPrimary = mode.primaryRoles.includes(role)
@@ -33,20 +33,23 @@ export default function ModeSidebar({ activeMode, role, onSelectMode }: Props) {
             key={mode.id}
             onClick={() => onSelectMode(mode.id)}
             style={{
-              padding: 20,
-              borderRadius: 12,
+              padding: '14px 16px',
+              borderRadius: 10,
               border: `1px solid ${isActive ? primary : 'rgba(255,255,255,0.06)'}`,
               background: cardBg,
               cursor: 'pointer',
               position: 'relative',
               overflow: 'hidden',
-              transition: 'all 0.25s ease',
+              transition: 'all 0.22s ease',
               boxShadow: isActive ? activeShadow : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
             }}
             onMouseEnter={(e) => {
               if (!isActive) {
                 e.currentTarget.style.borderColor = primary
-                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.transform = 'translateX(2px)'
                 e.currentTarget.style.boxShadow = activeShadow
               }
             }}
@@ -63,27 +66,47 @@ export default function ModeSidebar({ activeMode, role, onSelectMode }: Props) {
               style={{
                 position: 'absolute',
                 inset: 0,
-                borderRadius: 12,
+                borderRadius: 10,
                 background: 'linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.02))',
                 pointerEvents: 'none',
               }}
             />
 
-            <span style={{ fontSize: 24, marginBottom: 10, display: 'block' }}>{mode.icon}</span>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#F1F5F9', marginBottom: 6 }}>
-              {mode.label}
-              {isPrimary && (
-                <span style={{ marginLeft: 6, color: primary, fontSize: 12 }}>★</span>
-              )}
+            {/* Active indicator */}
+            {isActive && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 8,
+                  bottom: 8,
+                  width: 3,
+                  borderRadius: '0 3px 3px 0',
+                  background: primary,
+                }}
+              />
+            )}
+
+            <span style={{ fontSize: 20, flexShrink: 0, paddingLeft: isActive ? 4 : 0, transition: 'padding 0.2s' }}>
+              {mode.icon}
+            </span>
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#F1F5F9', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {mode.label}
+                {isPrimary && (
+                  <span style={{ color: primary, fontSize: 11 }}>★</span>
+                )}
+              </div>
+              <p style={{ fontSize: 11, color: '#94A3B8', lineHeight: 1.4, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {mode.description.split('—')[0].trim()}
+              </p>
             </div>
-            <p style={{ fontSize: 12, color: '#94A3B8', lineHeight: 1.5 }}>
-              {mode.description.split('—')[0].trim()}
-            </p>
+
             <span
               style={{
-                display: 'inline-block',
-                marginTop: 10,
-                padding: '2px 8px',
+                flexShrink: 0,
+                padding: '2px 7px',
                 borderRadius: 100,
                 fontSize: 10,
                 fontWeight: 600,
@@ -91,7 +114,7 @@ export default function ModeSidebar({ activeMode, role, onSelectMode }: Props) {
                 color: tagColor,
               }}
             >
-              {isPrimary ? 'Recommended' : 'Available'}
+              {isPrimary ? 'Rec' : 'Avail'}
             </span>
           </div>
         )
