@@ -135,6 +135,7 @@ export async function loadSelectedFiles(
 /**
  * Recursively fetches all source files from a repo (up to maxFiles).
  * Used by the "Load Repo Context" quick-load button.
+ * Dirs are traversed in parallel; file contents are also fetched in parallel.
  */
 export async function loadRepoContext(
   owner: string,
@@ -143,63 +144,73 @@ export async function loadRepoContext(
   maxFiles = 50,
   onLog?: LogCallback,
 ): Promise<LoadedFile[]> {
-  const loaded: LoadedFile[] = []
+  // Phase 1: collect all eligible file metadata in parallel
+  const fileMetas: { name: string; path: string; size: number }[] = []
 
-  async function traverse(path: string) {
-    if (loaded.length >= maxFiles) return
-
+  async function collectFiles(path: string): Promise<void> {
     const items = await fetchRepoTree(owner, repo, githubToken, path)
-
-    for (const item of items) {
-      if (loaded.length >= maxFiles) break
-      if (item.type === 'dir') {
-        await traverse(item.path)
-      } else if (item.type === 'file') {
-        const filename = item.name
-        const filePath = item.path
-        const size = item.size ?? 0
-
-        if (size >= 100_000) {
-          onLog?.({
-            source: 'repo-autoload',
-            filename,
-            path: filePath,
-            status: 'skipped',
-            sizeBytes: size,
-            technicalDetail: `File size ${size.toLocaleString()} bytes exceeds 100 KB limit`,
-            plainExplanation: `Skipped — this file is too large (${(size / 1024).toFixed(0)} KB). Only files under 100 KB are auto-loaded to keep the AI context focused.`,
-          })
-          continue
+    await Promise.all(
+      items.map((item) => {
+        if (item.type === 'dir') return collectFiles(item.path)
+        if (item.type === 'file') {
+          fileMetas.push({ name: item.name, path: item.path, size: item.size ?? 0 })
         }
-
-        try {
-          const content = await fetchFileContent(owner, repo, filePath, githubToken)
-          loaded.push({ path: filePath, content })
-          onLog?.({
-            source: 'repo-autoload',
-            filename,
-            path: filePath,
-            status: 'success',
-            sizeBytes: content.length,
-            plainExplanation: `Loaded successfully (${(content.length / 1024).toFixed(1)} KB, ${content.split('\n').length} lines).`,
-          })
-        } catch (e) {
-          const msg = (e as Error)?.message ?? 'Unknown error'
-          onLog?.({
-            source: 'repo-autoload',
-            filename,
-            path: filePath,
-            status: 'error',
-            sizeBytes: size,
-            technicalDetail: msg,
-            plainExplanation: 'Could not read this file. It may be binary, corrupted, or access was denied.',
-          })
-        }
-      }
-    }
+        return Promise.resolve()
+      }),
+    )
   }
 
-  await traverse('')
+  await collectFiles('')
+
+  // Phase 2: filter and cap, then fetch all file contents in parallel
+  const eligible = fileMetas
+    .filter((f) => {
+      if (f.size >= 100_000) {
+        onLog?.({
+          source: 'repo-autoload',
+          filename: f.name,
+          path: f.path,
+          status: 'skipped',
+          sizeBytes: f.size,
+          technicalDetail: `File size ${f.size.toLocaleString()} bytes exceeds 100 KB limit`,
+          plainExplanation: `Skipped — this file is too large (${(f.size / 1024).toFixed(0)} KB).`,
+        })
+        return false
+      }
+      return true
+    })
+    .slice(0, maxFiles)
+
+  const results = await Promise.allSettled(
+    eligible.map((f) => fetchFileContent(owner, repo, f.path, githubToken).then((content) => ({ f, content }))),
+  )
+
+  const loaded: LoadedFile[] = []
+  results.forEach((r) => {
+    if (r.status === 'fulfilled') {
+      const { f, content } = r.value
+      loaded.push({ path: f.path, content })
+      onLog?.({
+        source: 'repo-autoload',
+        filename: f.name,
+        path: f.path,
+        status: 'success',
+        sizeBytes: content.length,
+        plainExplanation: `Loaded successfully (${(content.length / 1024).toFixed(1)} KB, ${content.split('\n').length} lines).`,
+      })
+    } else {
+      const meta = eligible[results.indexOf(r)]
+      const msg = (r.reason as Error)?.message ?? 'Unknown error'
+      onLog?.({
+        source: 'repo-autoload',
+        filename: meta?.name ?? '',
+        path: meta?.path ?? '',
+        status: 'error',
+        technicalDetail: msg,
+        plainExplanation: 'Could not read this file. It may be binary, corrupted, or access was denied.',
+      })
+    }
+  })
   return loaded
 }
 
