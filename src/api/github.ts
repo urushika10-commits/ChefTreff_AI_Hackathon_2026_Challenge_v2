@@ -133,9 +133,9 @@ export async function loadSelectedFiles(
 }
 
 /**
- * Recursively fetches all source files from a repo (up to maxFiles).
- * Directory traversal is sequential (avoids GitHub secondary rate limits).
- * File contents are fetched in parallel for speed.
+ * Fetches all source files from a repo (up to maxFiles) using the Git Trees API.
+ * Gets the entire file tree in 2 requests (no recursive directory traversal),
+ * then fetches file contents in parallel for speed.
  */
 export async function loadRepoContext(
   owner: string,
@@ -144,22 +144,29 @@ export async function loadRepoContext(
   maxFiles = 50,
   onLog?: LogCallback,
 ): Promise<LoadedFile[]> {
-  // Phase 1: collect file metadata via sequential directory traversal
-  const fileMetas: { name: string; path: string; size: number }[] = []
+  // Phase 1: get full repo tree in one request via Git Trees API
+  const params = new URLSearchParams({ owner, repo })
+  if (githubToken) params.set('githubToken', githubToken)
 
-  async function collectFiles(path: string): Promise<void> {
-    const items = await fetchRepoTree(owner, repo, githubToken, path)
-    for (const item of items) {
-      if (fileMetas.length >= maxFiles) break
-      if (item.type === 'dir') {
-        await collectFiles(item.path)
-      } else if (item.type === 'file') {
-        fileMetas.push({ name: item.name, path: item.path, size: item.size ?? 0 })
-      }
-    }
+  const treeRes = await fetch(`/api/github/tree?${params}`)
+  if (!treeRes.ok) {
+    const err = await treeRes.json().catch(() => ({}))
+    throw new Error(err.error || `GitHub API error ${treeRes.status}`)
+  }
+  const { tree } = await treeRes.json() as {
+    tree: Array<{ path: string; type: string; size?: number }>
+    branch: string
+    truncated: boolean
   }
 
-  await collectFiles('')
+  // Filter to source files only
+  const fileMetas = tree
+    .filter((item) => item.type === 'blob' && isSourceFile(item.path.split('/').pop() ?? ''))
+    .map((item) => ({
+      name: item.path.split('/').pop() ?? item.path,
+      path: item.path,
+      size: item.size ?? 0,
+    }))
 
   // Phase 2: filter oversized files, cap list, then fetch contents in parallel
   const eligible = fileMetas.filter((f) => {

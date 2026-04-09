@@ -185,6 +185,49 @@ app.post('/api/chat', async (req, res) => {
   }
 })
 
+// Git Trees API — returns the full recursive file tree in one request
+app.get('/api/github/tree', async (req, res) => {
+  const { owner, repo, githubToken } = req.query
+  if (!owner || !repo) return res.status(400).json({ error: 'owner and repo required' })
+
+  const ghHeaders = {
+    Accept: 'application/vnd.github.v3+json',
+    'User-Agent': 'DualMind-AI-App',
+    'X-GitHub-Api-Version': '2022-11-28',
+  }
+  if (githubToken) ghHeaders['Authorization'] = `Bearer ${githubToken}`
+
+  try {
+    // Step 1: get default branch
+    const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers: ghHeaders })
+    if (!repoRes.ok) {
+      const text = await repoRes.text()
+      let msg = text
+      try { msg = JSON.parse(text).message || text } catch {}
+      return res.status(repoRes.status).json({ error: `GitHub ${repoRes.status}: ${msg}` })
+    }
+    const repoData = await repoRes.json()
+    const branch = repoData.default_branch || 'main'
+
+    // Step 2: get full recursive tree
+    const treeRes = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
+      { headers: ghHeaders },
+    )
+    if (!treeRes.ok) {
+      const text = await treeRes.text()
+      let msg = text
+      try { msg = JSON.parse(text).message || text } catch {}
+      return res.status(treeRes.status).json({ error: `GitHub ${treeRes.status}: ${msg}` })
+    }
+    const treeData = await treeRes.json()
+    res.json({ tree: treeData.tree || [], branch, truncated: treeData.truncated })
+  } catch (err) {
+    console.error('[github/tree] fetch threw:', err.message)
+    res.status(500).json({ error: `Server error: ${err.message}` })
+  }
+})
+
 // GitHub proxy — avoids CORS issues and keeps token server-side optional
 app.get('/api/github/repo', async (req, res) => {
   const { owner, repo, path = '', githubToken } = req.query
@@ -194,19 +237,28 @@ app.get('/api/github/repo', async (req, res) => {
   const headers = {
     Accept: 'application/vnd.github.v3+json',
     'User-Agent': 'DualMind-AI-App',
+    'X-GitHub-Api-Version': '2022-11-28',
   }
   if (githubToken) headers['Authorization'] = `Bearer ${githubToken}`
 
   try {
     const response = await fetch(url, { headers })
+    const text = await response.text()
+    console.log(`[github/repo] ${response.status} ${url}`)
     if (!response.ok) {
-      const text = await response.text()
-      return res.status(response.status).json({ error: text })
+      // Try to extract a clean message from GitHub's JSON error body
+      let message = text
+      try {
+        const parsed = JSON.parse(text)
+        message = parsed.message || text
+      } catch {}
+      console.error(`[github/repo] error body: ${message}`)
+      return res.status(response.status).json({ error: `GitHub ${response.status}: ${message}` })
     }
-    const data = await response.json()
-    res.json(data)
+    res.json(JSON.parse(text))
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error('[github/repo] fetch threw:', err.message)
+    res.status(500).json({ error: `Server fetch error: ${err.message}` })
   }
 })
 
@@ -219,16 +271,24 @@ app.get('/api/github/file', async (req, res) => {
   const headers = {
     Accept: 'application/vnd.github.v3.raw',
     'User-Agent': 'DualMind-AI-App',
+    'X-GitHub-Api-Version': '2022-11-28',
   }
   if (githubToken) headers['Authorization'] = `Bearer ${githubToken}`
 
   try {
     const response = await fetch(url, { headers })
-    if (!response.ok) return res.status(response.status).json({ error: 'File not found' })
+    console.log(`[github/file] ${response.status} ${path}`)
+    if (!response.ok) {
+      const text = await response.text()
+      let message = text
+      try { message = JSON.parse(text).message || text } catch {}
+      return res.status(response.status).json({ error: `GitHub ${response.status}: ${message}` })
+    }
     const text = await response.text()
     res.json({ content: text, path })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error('[github/file] fetch threw:', err.message)
+    res.status(500).json({ error: `Server fetch error: ${err.message}` })
   }
 })
 
