@@ -12,8 +12,17 @@ app.use(express.json({ limit: '4mb' }))
 // Detect provider from key prefix
 function detectProvider(apiKey) {
   if (apiKey.startsWith('sk-ant-')) return 'anthropic'
+  if (apiKey.startsWith('xai-'))    return 'xai'      // Grok (xAI)
+  if (apiKey.startsWith('AIza'))    return 'gemini'   // Google Gemini
   if (apiKey.startsWith('sk-') || apiKey.startsWith('sess-')) return 'openai'
-  return 'anthropic' // default fallback
+  return 'anthropic'
+}
+
+// Config for OpenAI-compatible providers
+const COMPAT_PROVIDERS = {
+  openai:  { baseURL: null,                                                                 model: 'gpt-4o' },
+  xai:     { baseURL: 'https://api.x.ai/v1',                                               model: 'grok-3' },
+  gemini:  { baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',           model: 'gemini-2.0-flash' },
 }
 
 // Health check
@@ -91,8 +100,11 @@ app.post('/api/chat', async (req, res) => {
         res.end()
       })
     } else {
-      // ── OpenAI / GPT ────────────────────────────────────────────────────
-      const client = new OpenAI({ apiKey })
+      // ── OpenAI-compatible (OpenAI / Grok / Gemini) ──────────────────────
+      const cfg = COMPAT_PROVIDERS[provider]
+      const clientOpts = { apiKey }
+      if (cfg.baseURL) clientOpts.baseURL = cfg.baseURL
+      const client = new OpenAI(clientOpts)
 
       const openaiMessages = [
         { role: 'system', content: systemPrompt },
@@ -100,7 +112,7 @@ app.post('/api/chat', async (req, res) => {
       ]
 
       const stream = await client.chat.completions.create({
-        model: 'gpt-4o',
+        model: cfg.model,
         stream: true,
         messages: openaiMessages,
       })

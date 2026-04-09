@@ -54,9 +54,13 @@ export default function SettingsModal({ settings, onSave, onClose }: Props) {
   }
 
   const providerLabel = form.apiKey.startsWith('sk-ant-')
-    ? '✅ Anthropic key detected'
+    ? '✅ Anthropic (Claude)'
+    : form.apiKey.startsWith('xai-')
+    ? '✅ xAI (Grok)'
+    : form.apiKey.startsWith('AIza')
+    ? '✅ Google (Gemini)'
     : form.apiKey.startsWith('sk-')
-    ? '✅ OpenAI key detected'
+    ? '✅ OpenAI (GPT-4o)'
     : ''
 
   function handleSave() {
@@ -132,7 +136,7 @@ export default function SettingsModal({ settings, onSave, onClose }: Props) {
                 type={showKey ? 'text' : 'password'}
                 value={form.apiKey}
                 onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
-                placeholder="sk-ant-… or sk-…"
+                placeholder="sk-ant-…  sk-…  xai-…  AIza…"
                 style={{ ...inputStyle, paddingRight: 56 }}
                 onFocus={(e) => { e.currentTarget.style.borderColor = '#3B82F6' }}
                 onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(59,130,246,0.2)' }}
@@ -162,7 +166,7 @@ export default function SettingsModal({ settings, onSave, onClose }: Props) {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
               <p style={{ fontSize: 11, color: '#475569' }}>
-                Accepts Anthropic <span style={{ color: '#94A3B8' }}>or</span> OpenAI keys. Stored in localStorage only.
+                Anthropic · OpenAI · xAI (Grok) · Google (Gemini). Stored locally only.
               </p>
               {providerLabel && (
                 <span style={{ fontSize: 11, color: '#10B981', flexShrink: 0 }}>{providerLabel}</span>
