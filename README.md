@@ -1,1 +1,1 @@
-# ChefTreff_AI_Hackathon_2026
+# ChefTreff_AI_Hackathon_2026_Challenge_v2
