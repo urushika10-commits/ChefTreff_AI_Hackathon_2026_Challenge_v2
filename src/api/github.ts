@@ -134,8 +134,8 @@ export async function loadSelectedFiles(
 
 /**
  * Recursively fetches all source files from a repo (up to maxFiles).
- * Used by the "Load Repo Context" quick-load button.
- * Dirs are traversed in parallel; file contents are also fetched in parallel.
+ * Directory traversal is sequential (avoids GitHub secondary rate limits).
+ * File contents are fetched in parallel for speed.
  */
 export async function loadRepoContext(
   owner: string,
@@ -144,49 +144,49 @@ export async function loadRepoContext(
   maxFiles = 50,
   onLog?: LogCallback,
 ): Promise<LoadedFile[]> {
-  // Phase 1: collect all eligible file metadata in parallel
+  // Phase 1: collect file metadata via sequential directory traversal
   const fileMetas: { name: string; path: string; size: number }[] = []
 
   async function collectFiles(path: string): Promise<void> {
     const items = await fetchRepoTree(owner, repo, githubToken, path)
-    await Promise.all(
-      items.map((item) => {
-        if (item.type === 'dir') return collectFiles(item.path)
-        if (item.type === 'file') {
-          fileMetas.push({ name: item.name, path: item.path, size: item.size ?? 0 })
-        }
-        return Promise.resolve()
-      }),
-    )
+    for (const item of items) {
+      if (fileMetas.length >= maxFiles) break
+      if (item.type === 'dir') {
+        await collectFiles(item.path)
+      } else if (item.type === 'file') {
+        fileMetas.push({ name: item.name, path: item.path, size: item.size ?? 0 })
+      }
+    }
   }
 
   await collectFiles('')
 
-  // Phase 2: filter and cap, then fetch all file contents in parallel
-  const eligible = fileMetas
-    .filter((f) => {
-      if (f.size >= 100_000) {
-        onLog?.({
-          source: 'repo-autoload',
-          filename: f.name,
-          path: f.path,
-          status: 'skipped',
-          sizeBytes: f.size,
-          technicalDetail: `File size ${f.size.toLocaleString()} bytes exceeds 100 KB limit`,
-          plainExplanation: `Skipped — this file is too large (${(f.size / 1024).toFixed(0)} KB).`,
-        })
-        return false
-      }
-      return true
-    })
-    .slice(0, maxFiles)
+  // Phase 2: filter oversized files, cap list, then fetch contents in parallel
+  const eligible = fileMetas.filter((f) => {
+    if (f.size >= 100_000) {
+      onLog?.({
+        source: 'repo-autoload',
+        filename: f.name,
+        path: f.path,
+        status: 'skipped',
+        sizeBytes: f.size,
+        technicalDetail: `File size ${f.size.toLocaleString()} bytes exceeds 100 KB limit`,
+        plainExplanation: `Skipped — this file is too large (${(f.size / 1024).toFixed(0)} KB).`,
+      })
+      return false
+    }
+    return true
+  }).slice(0, maxFiles)
 
   const results = await Promise.allSettled(
-    eligible.map((f) => fetchFileContent(owner, repo, f.path, githubToken).then((content) => ({ f, content }))),
+    eligible.map((f) =>
+      fetchFileContent(owner, repo, f.path, githubToken).then((content) => ({ f, content })),
+    ),
   )
 
   const loaded: LoadedFile[] = []
-  results.forEach((r) => {
+  results.forEach((r, i) => {
+    const meta = eligible[i]
     if (r.status === 'fulfilled') {
       const { f, content } = r.value
       loaded.push({ path: f.path, content })
@@ -199,7 +199,6 @@ export async function loadRepoContext(
         plainExplanation: `Loaded successfully (${(content.length / 1024).toFixed(1)} KB, ${content.split('\n').length} lines).`,
       })
     } else {
-      const meta = eligible[results.indexOf(r)]
       const msg = (r.reason as Error)?.message ?? 'Unknown error'
       onLog?.({
         source: 'repo-autoload',
