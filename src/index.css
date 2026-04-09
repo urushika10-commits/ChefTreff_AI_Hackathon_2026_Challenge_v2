@@ -3,93 +3,79 @@
 @tailwind utilities;
 
 @layer base {
-  * {
-    box-sizing: border-box;
-  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   html, body, #root {
     height: 100%;
-    margin: 0;
-    padding: 0;
   }
 
   body {
-    @apply bg-slate-950 text-slate-100;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #F1F5F9;
+    background: #050505;
+    overflow: hidden;
   }
 
-  /* Scrollbar styling */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  ::-webkit-scrollbar-track {
-    @apply bg-transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    @apply bg-slate-600 rounded-full;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-500;
-  }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
 }
 
 @layer components {
+  /* Markdown prose styles */
   .prose-custom {
-    @apply text-slate-200 text-sm leading-relaxed;
+    color: #F1F5F9;
+    font-size: 13px;
+    line-height: 1.6;
   }
-
   .prose-custom h1, .prose-custom h2, .prose-custom h3 {
-    @apply text-slate-100 font-semibold mt-4 mb-2;
+    color: #F1F5F9;
+    font-weight: 700;
+    margin-top: 16px;
+    margin-bottom: 8px;
+    font-size: 13px;
   }
-
-  .prose-custom h1 { @apply text-xl; }
-  .prose-custom h2 { @apply text-lg; }
-  .prose-custom h3 { @apply text-base; }
-
-  .prose-custom p { @apply mb-3; }
-
-  .prose-custom ul, .prose-custom ol {
-    @apply pl-5 mb-3 space-y-1;
+  .prose-custom h1:first-child, .prose-custom h2:first-child, .prose-custom h3:first-child {
+    margin-top: 0;
   }
-  .prose-custom ul { @apply list-disc; }
-  .prose-custom ol { @apply list-decimal; }
-
-  .prose-custom li { @apply text-slate-300; }
-
+  .prose-custom p { margin-bottom: 8px; }
+  .prose-custom p:last-child { margin-bottom: 0; }
+  .prose-custom ul, .prose-custom ol { padding-left: 18px; margin: 6px 0; }
+  .prose-custom li { margin-bottom: 4px; }
   .prose-custom code {
-    @apply bg-slate-800 text-indigo-300 px-1 py-0.5 rounded text-xs font-mono;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.08);
   }
-
   .prose-custom pre {
-    @apply bg-slate-800 rounded-lg p-4 mb-3 overflow-x-auto;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    padding: 10px;
+    overflow-x: auto;
+    margin: 8px 0;
+    border: 1px solid rgba(255,255,255,0.06);
   }
-
   .prose-custom pre code {
-    @apply bg-transparent text-slate-300 p-0;
+    background: none;
+    padding: 0;
+    font-size: 11.5px;
+    color: #E2E8F0;
   }
-
+  .prose-custom strong { font-weight: 600; }
   .prose-custom blockquote {
-    @apply border-l-2 border-indigo-500 pl-4 text-slate-400 italic my-3;
+    border-left: 3px solid rgba(255,255,255,0.2);
+    padding-left: 10px;
+    margin: 8px 0;
+    color: #94A3B8;
   }
-
-  .prose-custom strong { @apply text-slate-100 font-semibold; }
-
-  .prose-custom hr {
-    @apply border-slate-700 my-4;
-  }
-
-  .prose-custom a { @apply text-indigo-400 hover:text-indigo-300 underline; }
-
-  .prose-custom table {
-    @apply w-full border-collapse mb-3;
-  }
-  .prose-custom th {
-    @apply bg-slate-700 text-slate-200 text-left px-3 py-2 text-sm font-semibold;
-  }
-  .prose-custom td {
-    @apply border-t border-slate-700 px-3 py-2 text-sm text-slate-300;
-  }
+  .prose-custom hr { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 10px 0; }
+  .prose-custom a { color: #93C5FD; text-decoration: underline; }
+  .prose-custom table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0; }
+  .prose-custom th, .prose-custom td { padding: 6px 8px; border: 1px solid rgba(255,255,255,0.08); text-align: left; }
+  .prose-custom th { background: rgba(255,255,255,0.05); font-weight: 600; }
 }
 
 /* Streaming cursor */
@@ -97,18 +83,32 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }
-
 .streaming-cursor::after {
   content: '▋';
-  @apply text-indigo-400;
-  animation: blink 1s step-end infinite;
+  color: #94A3B8;
+  animation: blink 0.8s step-end infinite;
 }
 
 /* Fade-in animation */
-@keyframes fadeIn {
+@keyframes fadeInUp {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .animate-fade-in {
-  animation: fadeIn 0.2s ease-out;
+  animation: fadeInUp 0.2s ease-out;
+}
+
+/* Pulsing dot */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.pulse-dot {
+  animation: pulse-dot 2s infinite;
+}
+
+/* Bouncing streaming dots */
+@keyframes bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40% { transform: translateY(-6px); opacity: 1; }
 }

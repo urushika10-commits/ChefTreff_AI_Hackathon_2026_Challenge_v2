@@ -16,6 +16,19 @@ function parseGitHubInput(input: string): { owner: string; repo: string } | null
   return null
 }
 
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  background: '#0F2040',
+  border: '1px solid rgba(59,130,246,0.2)',
+  borderRadius: 8,
+  padding: '8px 12px',
+  fontSize: 13,
+  color: '#F1F5F9',
+  fontFamily: "'Inter', system-ui, sans-serif",
+  outline: 'none',
+  transition: 'border-color 0.2s ease',
+}
+
 export default function SettingsModal({ settings, onSave, onClose }: Props) {
   const [form, setForm] = useState<Settings>(settings)
   const [showKey, setShowKey] = useState(false)
@@ -31,7 +44,6 @@ export default function SettingsModal({ settings, onSave, onClose }: Props) {
     if (parsed) {
       setForm((f) => ({ ...f, repoOwner: parsed.owner, repoName: parsed.repo }))
     } else {
-      // treat as "owner/repo" shorthand
       const parts = val.split('/')
       setForm((f) => ({
         ...f,
@@ -54,58 +66,116 @@ export default function SettingsModal({ settings, onSave, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        background: 'rgba(0,0,0,0.7)',
+        backdropFilter: 'blur(6px)',
+      }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md animate-fade-in">
-        <div className="flex items-center justify-between p-5 border-b border-slate-800">
-          <h2 className="text-lg font-semibold text-white">⚙️ Settings</h2>
+      <div
+        style={{
+          background: '#0D1B35',
+          border: '1px solid rgba(59,130,246,0.2)',
+          borderRadius: 20,
+          boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+          width: '100%',
+          maxWidth: 440,
+          fontFamily: "'Inter', system-ui, sans-serif",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '18px 20px',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
+          <h2 style={{ fontSize: 16, fontWeight: 600, color: '#F1F5F9', margin: 0 }}>⚙️ Settings</h2>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors text-xl leading-none"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#475569',
+              fontSize: 20,
+              cursor: 'pointer',
+              lineHeight: 1,
+              padding: '0 4px',
+              transition: 'color 0.2s ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = '#F1F5F9' }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = '#475569' }}
           >
             ×
           </button>
         </div>
 
-        <div className="p-5 space-y-4">
+        {/* Body */}
+        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* API Key */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">
-              Anthropic API Key <span className="text-red-400">*</span>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#94A3B8', marginBottom: 6 }}>
+              API Key <span style={{ color: '#EF4444' }}>*</span>
             </label>
-            <div className="relative">
+            <div style={{ position: 'relative' }}>
               <input
                 type={showKey ? 'text' : 'password'}
                 value={form.apiKey}
                 onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
-                placeholder="sk-ant-... or sk-..."
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 pr-16"
+                placeholder="sk-ant-… or sk-…"
+                style={{ ...inputStyle, paddingRight: 56 }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#3B82F6' }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(59,130,246,0.2)' }}
               />
               <button
                 type="button"
                 onClick={() => setShowKey((v) => !v)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500 hover:text-slate-300 px-2 py-1"
+                style={{
+                  position: 'absolute',
+                  right: 8,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: '#475569',
+                  fontSize: 11,
+                  cursor: 'pointer',
+                  padding: '4px 6px',
+                  fontFamily: "'Inter', system-ui, sans-serif",
+                  transition: 'color 0.2s ease',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#94A3B8' }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = '#475569' }}
               >
                 {showKey ? 'Hide' : 'Show'}
               </button>
             </div>
-            <div className="flex items-center justify-between mt-1">
-              <p className="text-xs text-slate-500">
-                Accepts Anthropic <span className="text-slate-400">or</span> OpenAI keys. Stored in localStorage only.
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+              <p style={{ fontSize: 11, color: '#475569' }}>
+                Accepts Anthropic <span style={{ color: '#94A3B8' }}>or</span> OpenAI keys. Stored in localStorage only.
               </p>
               {providerLabel && (
-                <span className="text-xs text-emerald-400 shrink-0">{providerLabel}</span>
+                <span style={{ fontSize: 11, color: '#10B981', flexShrink: 0 }}>{providerLabel}</span>
               )}
             </div>
           </div>
 
           {/* GitHub section */}
-          <div className="border-t border-slate-800 pt-4">
-            <p className="text-sm font-medium text-slate-300 mb-3">GitHub Repository Context</p>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 16 }}>
+            <p style={{ fontSize: 13, fontWeight: 500, color: '#94A3B8', marginBottom: 12 }}>GitHub Repository Context</p>
 
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: 11, color: '#475569', marginBottom: 6 }}>
                 GitHub URL or owner/repo
               </label>
               <input
@@ -113,45 +183,85 @@ export default function SettingsModal({ settings, onSave, onClose }: Props) {
                 value={repoInput}
                 onChange={(e) => handleRepoChange(e.target.value)}
                 placeholder="https://github.com/owner/repo  or  owner/repo"
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                style={inputStyle}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#3B82F6' }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(59,130,246,0.2)' }}
               />
               {form.repoOwner && form.repoName && (
-                <p className="text-xs text-emerald-400 mt-1">
+                <p style={{ fontSize: 11, color: '#10B981', marginTop: 4 }}>
                   ✓ {form.repoOwner}/{form.repoName}
                 </p>
               )}
             </div>
 
-            <div className="mt-3">
-              <label className="block text-xs text-slate-400 mb-1">
+            <div>
+              <label style={{ display: 'block', fontSize: 11, color: '#475569', marginBottom: 6 }}>
                 GitHub Token{' '}
-                <span className="text-slate-600">(optional — increases rate limit)</span>
+                <span style={{ color: 'rgba(255,255,255,0.2)' }}>(optional — increases rate limit)</span>
               </label>
               <input
                 type="password"
                 value={form.githubToken}
                 onChange={(e) => setForm((f) => ({ ...f, githubToken: e.target.value }))}
-                placeholder="ghp_..."
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                placeholder="ghp_…"
+                style={inputStyle}
+                onFocus={(e) => { e.currentTarget.style.borderColor = '#3B82F6' }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(59,130,246,0.2)' }}
               />
-              <p className="text-xs text-slate-500 mt-1">
+              <p style={{ fontSize: 11, color: '#475569', marginTop: 4 }}>
                 Public repos work without a token (60 req/hr limit).
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex gap-3 p-5 border-t border-slate-800">
+        {/* Footer */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 10,
+            padding: 20,
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
           <button
             onClick={onClose}
-            className="flex-1 py-2 px-4 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition-colors"
+            style={{
+              flex: 1,
+              padding: '10px 0',
+              borderRadius: 8,
+              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'rgba(255,255,255,0.04)',
+              color: '#94A3B8',
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#F1F5F9' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#94A3B8' }}
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={!form.apiKey.trim()}
-            className="flex-1 py-2 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-medium transition-colors"
+            style={{
+              flex: 1,
+              padding: '10px 0',
+              borderRadius: 8,
+              border: 'none',
+              background: form.apiKey.trim() ? '#3B82F6' : 'rgba(255,255,255,0.06)',
+              color: form.apiKey.trim() ? 'white' : '#475569',
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: form.apiKey.trim() ? 'pointer' : 'not-allowed',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => { if (form.apiKey.trim()) e.currentTarget.style.background = '#2563EB' }}
+            onMouseLeave={(e) => { if (form.apiKey.trim()) e.currentTarget.style.background = '#3B82F6' }}
           >
             Save Settings
           </button>

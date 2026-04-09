@@ -36,9 +36,11 @@ export default function ModePanel({
 
   const mode = MODES.find((m) => m.id === activeMode)!
 
-  const accentColor = role === 'business' ? 'text-amber-400' : 'text-indigo-400'
-  const accentBg = role === 'business' ? 'bg-amber-500' : 'bg-indigo-600'
-  const accentHover = role === 'business' ? 'hover:bg-amber-400' : 'hover:bg-indigo-500'
+  const primary = role === 'business' ? '#3B82F6' : '#A855F7'
+  const surface = role === 'business' ? '#0D1B35' : '#120820'
+  const cardBg = role === 'business' ? '#0F2040' : '#170A2E'
+  const border = role === 'business' ? 'rgba(59,130,246,0.2)' : 'rgba(168,85,247,0.2)'
+  const lightColor = role === 'business' ? '#93C5FD' : '#D8B4FE'
 
   const handleGenerate = useCallback(async () => {
     if (!input.trim() || isStreaming) return
@@ -112,186 +114,278 @@ export default function ModePanel({
   }
 
   return (
-    <div className="h-full flex flex-col bg-slate-950">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Mode header */}
-      <div className="shrink-0 px-5 pt-4 pb-3 border-b border-slate-800 flex items-start justify-between gap-4">
+      <div
+        style={{
+          padding: '16px 20px',
+          borderRadius: 12,
+          background: surface,
+          border: `1px solid ${border}`,
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 16,
+        }}
+      >
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">{mode.icon}</span>
-            <h1 className="text-lg font-bold text-white">{mode.label}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <span style={{ fontSize: 24 }}>{mode.icon}</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: '#F1F5F9' }}>{mode.label}</span>
           </div>
-          <p className="text-sm text-slate-400 mt-0.5">{mode.description}</p>
+          <p style={{ fontSize: 13, color: '#94A3B8' }}>{mode.description}</p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Repo context button */}
-          <button
-            onClick={handleLoadRepo}
-            disabled={isLoadingRepo}
-            title={
-              repoLoaded
-                ? `Repo loaded: ${settings.repoOwner}/${settings.repoName}`
-                : 'Load repository files as context'
-            }
-            className={`
-              flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all
-              ${repoLoaded
-                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30'
-                : 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700'
-              }
-              disabled:opacity-50 disabled:cursor-not-allowed
-            `}
-          >
-            {isLoadingRepo ? (
-              <>
-                <span className="animate-spin">⟳</span> Loading repo…
-              </>
-            ) : repoLoaded ? (
-              <>✓ Repo loaded</>
-            ) : (
-              <>📁 Load Repo Context</>
-            )}
-          </button>
-        </div>
+        <button
+          onClick={handleLoadRepo}
+          disabled={isLoadingRepo}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 14px',
+            borderRadius: 8,
+            border: repoLoaded ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.1)',
+            background: repoLoaded ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.04)',
+            color: repoLoaded ? '#10B981' : '#94A3B8',
+            fontSize: 12,
+            fontWeight: 500,
+            cursor: isLoadingRepo ? 'not-allowed' : 'pointer',
+            opacity: isLoadingRepo ? 0.6 : 1,
+            flexShrink: 0,
+            fontFamily: "'Inter', system-ui, sans-serif",
+            transition: 'all 0.2s ease',
+          }}
+        >
+          {isLoadingRepo ? '⟳ Loading…' : repoLoaded ? '✓ Repo loaded' : '📁 Load Repo Context'}
+        </button>
       </div>
 
       {repoError && (
-        <div className="mx-5 mt-2 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400">
+        <div
+          style={{
+            padding: '10px 14px',
+            borderRadius: 8,
+            background: 'rgba(239,68,68,0.08)',
+            border: '1px solid rgba(239,68,68,0.25)',
+            fontSize: 12,
+            color: '#EF4444',
+          }}
+        >
           {repoError} —{' '}
-          <button onClick={onOpenSettings} className="underline">
+          <button onClick={onOpenSettings} style={{ textDecoration: 'underline', color: 'inherit', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit' }}>
             check Settings
           </button>
         </div>
       )}
 
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-4">
-        {/* Input area */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-            {mode.inputLabel}
-          </label>
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={mode.inputPlaceholder}
-            rows={7}
-            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 resize-y leading-relaxed"
-          />
-          <div className="flex items-center justify-between mt-2">
-            <p className="text-xs text-slate-600">
-              Tip: Press <kbd className="bg-slate-800 px-1 rounded">⌘/Ctrl+Enter</kbd> to generate
-            </p>
-            <button
-              onClick={handleGenerate}
-              disabled={isStreaming || !input.trim()}
-              className={`
-                flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold text-white
-                ${accentBg} ${accentHover}
-                disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed
-                transition-all active:scale-95
-              `}
-            >
-              {isStreaming ? (
-                <>
-                  <span className="animate-spin">⟳</span> Generating…
-                </>
-              ) : (
-                <>✨ Generate</>
-              )}
-            </button>
-          </div>
+      {/* Input area */}
+      <div>
+        <label
+          style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', color: '#475569', marginBottom: 8 }}
+        >
+          {mode.inputLabel}
+        </label>
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={mode.inputPlaceholder}
+          rows={7}
+          style={{
+            width: '100%',
+            background: cardBg,
+            border: `1px solid ${border}`,
+            borderRadius: 12,
+            padding: '12px 16px',
+            fontSize: 13,
+            color: '#F1F5F9',
+            fontFamily: "'Inter', system-ui, sans-serif",
+            resize: 'vertical',
+            outline: 'none',
+            lineHeight: 1.6,
+          }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = primary }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = border }}
+        />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+          <p style={{ fontSize: 11, color: '#475569' }}>
+            Tip: Press <kbd style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: 4, fontSize: 11 }}>⌘/Ctrl+Enter</kbd> to generate
+          </p>
+          <button
+            onClick={handleGenerate}
+            disabled={isStreaming || !input.trim()}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 20px',
+              borderRadius: 8,
+              border: 'none',
+              background: isStreaming || !input.trim() ? 'rgba(255,255,255,0.06)' : primary,
+              color: isStreaming || !input.trim() ? '#475569' : 'white',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: isStreaming || !input.trim() ? 'not-allowed' : 'pointer',
+              fontFamily: "'Inter', system-ui, sans-serif",
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {isStreaming ? '⟳ Generating…' : '✨ Generate'}
+          </button>
         </div>
+      </div>
 
-        {/* Thinking block */}
-        {thinking && (
-          <div className="bg-slate-900/60 border border-slate-700/60 rounded-xl overflow-hidden">
-            <button
-              onClick={() => setShowThinking((v) => !v)}
-              className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-slate-800/40 transition-colors"
+      {/* Thinking block */}
+      {thinking && (
+        <div
+          style={{
+            background: 'rgba(168,85,247,0.06)',
+            border: '1px solid rgba(168,85,247,0.15)',
+            borderRadius: 12,
+            overflow: 'hidden',
+          }}
+        >
+          <button
+            onClick={() => setShowThinking((v) => !v)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '10px 16px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: "'Inter', system-ui, sans-serif",
+              textAlign: 'left',
+            }}
+          >
+            <span style={{ color: '#A855F7', fontSize: 13 }}>🧠</span>
+            <span style={{ fontSize: 12, fontWeight: 500, color: '#A855F7' }}>
+              Claude's reasoning {showThinking ? '▲' : '▼'}
+            </span>
+          </button>
+          {showThinking && (
+            <div
+              style={{
+                padding: '0 16px 12px',
+                fontSize: 11,
+                color: '#475569',
+                fontFamily: 'monospace',
+                lineHeight: 1.6,
+                maxHeight: 192,
+                overflowY: 'auto',
+                borderTop: '1px solid rgba(168,85,247,0.1)',
+              }}
             >
-              <span className="text-purple-400 text-xs">🧠</span>
-              <span className="text-xs font-medium text-purple-400">
-                Claude's reasoning {showThinking ? '▲' : '▼'}
+              {thinking}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Output area */}
+      {(output || isStreaming) && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', color: '#475569' }}>
+              {mode.outputLabel}
+            </label>
+            {usage && (
+              <span style={{ fontSize: 11, color: '#475569' }}>
+                {usage.input.toLocaleString()} in · {usage.output.toLocaleString()} out tokens
               </span>
-            </button>
-            {showThinking && (
-              <div className="px-4 pb-3 text-xs text-slate-500 font-mono leading-relaxed max-h-48 overflow-y-auto border-t border-slate-800">
-                {thinking}
-              </div>
             )}
           </div>
-        )}
-
-        {/* Output area */}
-        {(output || isStreaming) && (
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                {mode.outputLabel}
-              </label>
-              {usage && (
-                <span className="text-[11px] text-slate-600">
-                  {usage.input.toLocaleString()} in · {usage.output.toLocaleString()} out tokens
-                </span>
+          <div
+            style={{
+              background: cardBg,
+              border: `1px solid ${border}`,
+              borderRadius: 12,
+              padding: '20px',
+            }}
+          >
+            <div className={`prose-custom ${isStreaming && !output ? '' : ''}`}>
+              {output ? (
+                <div className={isStreaming ? 'streaming-cursor' : ''}>
+                  <ReactMarkdown>{output}</ReactMarkdown>
+                </div>
+              ) : (
+                <p style={{ color: '#475569', fontSize: 13 }}>Generating…</p>
               )}
             </div>
+          </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-              <div className={`prose-custom ${isStreaming && !output ? 'animate-pulse' : ''}`}>
-                {output ? (
-                  <div className={isStreaming ? 'streaming-cursor' : ''}>
-                    <ReactMarkdown>{output}</ReactMarkdown>
-                  </div>
-                ) : (
-                  <p className="text-slate-500 text-sm">Generating…</p>
-                )}
-              </div>
+          {output && !isStreaming && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              {[
+                { label: '📋 Copy', action: () => navigator.clipboard.writeText(output) },
+                { label: '🗑 Clear', action: () => { setOutput(''); setThinking(''); setUsage(null) } },
+              ].map(({ label, action }) => (
+                <button
+                  key={label}
+                  onClick={action}
+                  style={{
+                    fontSize: 11,
+                    color: '#475569',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '4px 8px',
+                    borderRadius: 6,
+                    fontFamily: "'Inter', system-ui, sans-serif",
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#94A3B8' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#475569' }}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
+          )}
+        </div>
+      )}
 
-            {output && !isStreaming && (
-              <div className="flex gap-2 mt-2">
-                <button
-                  onClick={() => navigator.clipboard.writeText(output)}
-                  className="text-xs text-slate-500 hover:text-slate-300 px-2 py-1 rounded-md hover:bg-slate-800 transition-colors"
-                >
-                  📋 Copy
-                </button>
-                <button
-                  onClick={() => { setOutput(''); setThinking(''); setUsage(null) }}
-                  className="text-xs text-slate-500 hover:text-slate-300 px-2 py-1 rounded-md hover:bg-slate-800 transition-colors"
-                >
-                  🗑 Clear
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Empty state */}
-        {!output && !isStreaming && (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="text-4xl mb-3">{mode.icon}</div>
-            <p className="text-slate-500 text-sm max-w-xs">
-              {mode.description}
+      {/* Empty state */}
+      {!output && !isStreaming && (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '48px 24px',
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.6 }}>{mode.icon}</div>
+          <p style={{ color: '#475569', fontSize: 13, maxWidth: 300, lineHeight: 1.6 }}>{mode.description}</p>
+          {!repoLoaded && settings.repoOwner && (
+            <p style={{ color: '#475569', fontSize: 12, marginTop: 10 }}>
+              💡 Load your repo context above for more accurate results
             </p>
-            {!repoLoaded && settings.repoOwner && (
-              <p className="text-xs text-slate-600 mt-3">
-                💡 Load your repo context above for more accurate results
-              </p>
-            )}
-            {!settings.apiKey && (
-              <button
-                onClick={onOpenSettings}
-                className="mt-4 text-xs text-indigo-400 hover:text-indigo-300 underline"
-              >
-                Set your API key in Settings to get started
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+          )}
+          {!settings.apiKey && (
+            <button
+              onClick={onOpenSettings}
+              style={{
+                marginTop: 16,
+                fontSize: 12,
+                color: lightColor,
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+                fontFamily: "'Inter', system-ui, sans-serif",
+              }}
+            >
+              Set your API key in Settings to get started
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

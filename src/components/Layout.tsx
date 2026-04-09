@@ -25,78 +25,193 @@ export default function Layout({
   const [showSettings, setShowSettings] = useState(!state.settings.apiKey)
 
   const role = state.role!
-  const accentColor = role === 'business' ? 'text-amber-400' : 'text-indigo-400'
-  const accentBg = role === 'business' ? 'bg-amber-500/20' : 'bg-indigo-500/20'
-  const roleLabel = role === 'business' ? '📊 Business Analyst' : '💻 Developer'
+  const primary = role === 'business' ? '#3B82F6' : '#A855F7'
+  const bg = role === 'business' ? '#060D1F' : '#090612'
+  const surface = role === 'business' ? '#0D1B35' : '#120820'
+  const border = role === 'business' ? 'rgba(59,130,246,0.2)' : 'rgba(168,85,247,0.2)'
+  const lightColor = role === 'business' ? '#93C5FD' : '#D8B4FE'
+  const roleLabel = role === 'business' ? 'Business Analyst Mode' : 'Developer Mode'
+  const repoName =
+    state.settings.repoOwner && state.settings.repoName
+      ? `${state.settings.repoOwner}/${state.settings.repoName}`
+      : null
+
+  const headerBtnStyle: React.CSSProperties = {
+    padding: '7px 14px',
+    borderRadius: 8,
+    border: '1px solid rgba(255,255,255,0.12)',
+    background: 'transparent',
+    color: '#94A3B8',
+    fontFamily: "'Inter', system-ui, sans-serif",
+    fontSize: 12,
+    fontWeight: 500,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+  }
 
   return (
-    <div className="h-screen flex flex-col bg-slate-950 overflow-hidden">
-      {/* Header */}
-      <header className="h-12 shrink-0 bg-slate-900 border-b border-slate-800 flex items-center px-4 gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">🌉</span>
-          <span className="font-bold text-white text-sm">BridgeAI</span>
-        </div>
-
-        <div className="h-4 w-px bg-slate-700" />
-
-        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${accentBg} ${accentColor}`}>
-          {roleLabel}
+    <div
+      style={{
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        background: bg,
+        fontFamily: "'Inter', system-ui, sans-serif",
+        color: '#F1F5F9',
+      }}
+    >
+      {/* ── Header ── */}
+      <header
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 24px',
+          height: 60,
+          background: surface,
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          flexShrink: 0,
+          gap: 16,
+        }}
+      >
+        {/* Logo */}
+        <span
+          style={{
+            fontSize: 18,
+            fontWeight: 800,
+            letterSpacing: '-0.5px',
+            background: 'linear-gradient(135deg, #3B82F6, #A855F7)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            flexShrink: 0,
+          }}
+        >
+          BridgeAI
         </span>
 
-        <div className="flex-1" />
+        {/* Divider */}
+        <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.1)' }} />
 
-        {/* Repo status */}
-        {state.repoLoaded && (
-          <span className="text-xs text-emerald-400 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-            Repo loaded ({state.repoFiles.length} files)
-          </span>
+        {/* Role badge */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '5px 12px',
+            borderRadius: 100,
+            fontSize: 12,
+            fontWeight: 600,
+            background: `${primary}26`,
+            color: lightColor,
+            border: `1px solid ${border}`,
+          }}
+        >
+          <span
+            className="pulse-dot"
+            style={{ width: 7, height: 7, borderRadius: '50%', background: primary, display: 'inline-block' }}
+          />
+          {roleLabel}
+        </div>
+
+        <span style={{ fontSize: 14, color: '#94A3B8', fontWeight: 400 }}>Loan Calculator Project</span>
+
+        <div style={{ flex: 1 }} />
+
+        {/* Repo pill */}
+        {repoName && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '4px 10px',
+              borderRadius: 8,
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              fontSize: 12,
+              color: '#94A3B8',
+            }}
+          >
+            📂 {repoName}
+            {state.repoLoaded && (
+              <span style={{ color: '#10B981' }}>({state.repoFiles.length})</span>
+            )}
+          </div>
         )}
 
         {/* No API key warning */}
         {!state.settings.apiKey && (
-          <span className="text-xs text-amber-400 flex items-center gap-1">
-            ⚠️ No API key set
-          </span>
+          <span style={{ fontSize: 12, color: '#F59E0B' }}>⚠️ No API key</span>
         )}
 
+        {/* Header buttons */}
         <button
+          style={headerBtnStyle}
           onClick={onToggleChat}
-          title="Toggle chat panel"
-          className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md transition-colors text-sm"
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#F1F5F9' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94A3B8' }}
         >
-          {state.chatOpen ? '▶ Hide Chat' : '◀ Show Chat'}
+          {state.chatOpen ? '▶ Hide Chat' : '◀ Chat'}
         </button>
 
         <button
+          style={headerBtnStyle}
           onClick={() => setShowSettings(true)}
-          className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md transition-colors text-sm"
-          title="Settings"
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#F1F5F9' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94A3B8' }}
         >
-          ⚙️
+          ⚙️ Settings
         </button>
 
         <button
+          style={headerBtnStyle}
           onClick={onChangeRole}
-          className="p-1.5 text-slate-500 hover:text-slate-300 hover:bg-slate-800 rounded-md transition-colors text-xs"
-          title="Switch role"
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#F1F5F9' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94A3B8' }}
         >
-          Switch Role
+          ↩ Switch Role
         </button>
       </header>
 
-      {/* Main area */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left: Mode sidebar */}
-        <ModeSidebar
-          activeMode={state.activeMode}
-          role={role}
-          onSelectMode={onSetMode}
-        />
+      {/* ── Body ── */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        {/* Feature area */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '20px 24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 16,
+          }}
+        >
+          <p
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '1.5px',
+              textTransform: 'uppercase',
+              color: '#475569',
+              paddingBottom: 4,
+            }}
+          >
+            Quick Actions — select a mode
+          </p>
 
-        {/* Center: Mode panel */}
-        <main className="flex-1 overflow-hidden">
+          {/* Mode tile grid */}
+          <ModeSidebar
+            activeMode={state.activeMode}
+            role={role}
+            onSelectMode={onSetMode}
+          />
+
+          {/* Divider */}
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '4px 0' }} />
+
+          {/* Active mode work panel */}
           <ModePanel
             key={state.activeMode}
             activeMode={state.activeMode}
@@ -107,9 +222,9 @@ export default function Layout({
             onSetRepoContext={onSetRepoContext}
             onOpenSettings={() => setShowSettings(true)}
           />
-        </main>
+        </div>
 
-        {/* Right: Chat sidebar */}
+        {/* Chat sidebar */}
         {state.chatOpen && (
           <ChatSidebar
             activeMode={state.activeMode}
