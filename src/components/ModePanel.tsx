@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
-import type { ModeId, Role, Settings, LoadedFile, UploadedFiles } from '../lib/types'
+import type { ModeId, Role, Settings, LoadedFile, UploadedFiles, LogCallback } from '../lib/types'
 import MarkdownRenderer from './MarkdownRenderer'
 import { MODES, buildSystemPrompt } from '../lib/systemPrompts'
 import { streamChat } from '../api/claude'
@@ -14,6 +14,7 @@ interface Props {
   repoLoaded: boolean
   onSetRepoContext: (files: LoadedFile[], loaded: boolean) => void
   onOpenSettings: () => void
+  onLog?: LogCallback
 }
 
 export default function ModePanel({
@@ -24,6 +25,7 @@ export default function ModePanel({
   repoLoaded,
   onSetRepoContext,
   onOpenSettings,
+  onLog,
 }: Props) {
   const [input, setInput] = useState('')
   const [output, setOutput] = useState('')
@@ -106,6 +108,8 @@ export default function ModePanel({
         settings.repoOwner,
         settings.repoName,
         settings.githubToken,
+        50,
+        onLog,
       )
       onSetRepoContext(files, true)
     } catch (err) {
@@ -174,6 +178,7 @@ export default function ModePanel({
         files={uploadedFiles}
         onChange={setUploadedFiles}
         role={role}
+        onLog={onLog}
       />
 
       {repoError && (

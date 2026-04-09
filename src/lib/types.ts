@@ -69,3 +69,25 @@ export interface AppState {
   repoLoaded: boolean
   chatOpen: boolean
 }
+
+// ── Load Log ──────────────────────────────────────────────────────────────────
+
+export type LogSource = 'repo-autoload' | 'repo-browser' | 'file-upload' | 'zip-extract'
+export type LogStatus = 'success' | 'error' | 'warning' | 'skipped'
+
+export interface LogEntry {
+  id: string
+  timestamp: Date
+  source: LogSource
+  filename: string
+  path?: string
+  status: LogStatus
+  /** Raw technical info (HTTP status, exception message, byte count, etc.) */
+  technicalDetail?: string
+  /** Human-friendly one-liner that makes sense to a non-developer */
+  plainExplanation: string
+  sizeBytes?: number
+}
+
+/** Call this to push a new entry; id + timestamp are stamped automatically */
+export type LogCallback = (entry: Omit<LogEntry, 'id' | 'timestamp'>) => void

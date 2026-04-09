@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import type { ModeId, Role, Settings, LoadedFile, Message, UploadedFiles } from '../lib/types'
+import type { ModeId, Role, Settings, LoadedFile, Message, UploadedFiles, LogCallback } from '../lib/types'
 import MarkdownRenderer from './MarkdownRenderer'
 import { buildSystemPrompt } from '../lib/systemPrompts'
 import { streamChat } from '../api/claude'
@@ -13,6 +13,7 @@ interface Props {
   settings: Settings
   repoFiles: LoadedFile[]
   onOpenSettings: () => void
+  onLog?: LogCallback
 }
 
 export default function ChatSidebar({
@@ -21,6 +22,7 @@ export default function ChatSidebar({
   settings,
   repoFiles,
   onOpenSettings,
+  onLog,
 }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -340,6 +342,7 @@ export default function ChatSidebar({
           onChange={setUploadedFiles}
           role={role}
           compact
+          onLog={onLog}
         />
         <div
           style={{

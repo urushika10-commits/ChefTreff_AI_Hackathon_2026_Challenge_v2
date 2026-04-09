@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import type { RepoFile, LoadedFile, Settings, Role } from '../lib/types'
+import type { RepoFile, LoadedFile, Settings, Role, LogCallback } from '../lib/types'
 import { fetchDirContents, fetchFileContent, loadSelectedFiles } from '../api/github'
 
 interface Props {
@@ -8,6 +8,7 @@ interface Props {
   alreadyLoaded: string[]           // paths already in context (pre-checked)
   onLoad: (files: LoadedFile[]) => void
   onClose: () => void
+  onLog?: LogCallback
 }
 
 const MAX_SELECT = 50
@@ -52,7 +53,7 @@ function fmtSize(bytes?: number) {
   return `${(bytes / 1024 / 1024).toFixed(1)}M`
 }
 
-export default function RepoBrowser({ settings, role, alreadyLoaded, onLoad, onClose }: Props) {
+export default function RepoBrowser({ settings, role, alreadyLoaded, onLoad, onClose, onLog }: Props) {
   const { repoOwner: owner, repoName: repo, githubToken: token } = settings
 
   // path → its children (lazy)
@@ -129,14 +130,14 @@ export default function RepoBrowser({ settings, role, alreadyLoaded, onLoad, onC
     if (selected.size === 0 || loadingCtx) return
     setLoadingCtx(true)
     try {
-      const files = await loadSelectedFiles(owner, repo, Array.from(selected), token)
+      const files = await loadSelectedFiles(owner, repo, Array.from(selected), token, onLog)
       onLoad(files)
       onClose()
     } catch (e) {
       setError((e as Error).message)
       setLoadingCtx(false)
     }
-  }, [selected, loadingCtx, owner, repo, token, onLoad, onClose])
+  }, [selected, loadingCtx, owner, repo, token, onLoad, onClose, onLog])
 
   // ── Tree renderer ──────────────────────────────────────────────────────────
   function TreeNode({ item, depth }: { item: RepoFile; depth: number }) {

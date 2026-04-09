@@ -1,4 +1,4 @@
-import type { RepoFile, LoadedFile } from '../lib/types'
+import type { RepoFile, LoadedFile, LogCallback } from '../lib/types'
 
 const SOURCE_EXTENSIONS = new Set([
   '.ts', '.tsx', '.js', '.jsx', '.py', '.java', '.cs', '.go', '.rb',
@@ -87,13 +87,14 @@ export async function fetchDirContents(
 
 /**
  * Fetch a specific set of file paths chosen by the user in the browser.
- * Failed fetches are silently skipped.
+ * Failed fetches are logged (if onLog provided) and silently skipped.
  */
 export async function loadSelectedFiles(
   owner: string,
   repo: string,
   paths: string[],
   githubToken: string,
+  onLog?: LogCallback,
 ): Promise<LoadedFile[]> {
   const results = await Promise.allSettled(
     paths.map(async (path) => {
@@ -101,9 +102,34 @@ export async function loadSelectedFiles(
       return { path, content }
     }),
   )
-  return results
-    .filter((r): r is PromiseFulfilledResult<LoadedFile> => r.status === 'fulfilled')
-    .map((r) => r.value)
+
+  const loaded: LoadedFile[] = []
+  results.forEach((r, i) => {
+    const path = paths[i]
+    const filename = path.split('/').pop() ?? path
+    if (r.status === 'fulfilled') {
+      loaded.push(r.value)
+      onLog?.({
+        source: 'repo-browser',
+        filename,
+        path,
+        status: 'success',
+        sizeBytes: r.value.content.length,
+        plainExplanation: 'File fetched and added to AI context.',
+      })
+    } else {
+      const msg = (r.reason as Error)?.message ?? 'Unknown error'
+      onLog?.({
+        source: 'repo-browser',
+        filename,
+        path,
+        status: 'error',
+        technicalDetail: msg,
+        plainExplanation: 'Could not read this file. It may be binary, private, or the path no longer exists.',
+      })
+    }
+  })
+  return loaded
 }
 
 /**
@@ -115,6 +141,7 @@ export async function loadRepoContext(
   repo: string,
   githubToken: string,
   maxFiles = 50,
+  onLog?: LogCallback,
 ): Promise<LoadedFile[]> {
   const loaded: LoadedFile[] = []
 
@@ -127,12 +154,46 @@ export async function loadRepoContext(
       if (loaded.length >= maxFiles) break
       if (item.type === 'dir') {
         await traverse(item.path)
-      } else if (item.type === 'file' && (item.size ?? 0) < 100_000) {
+      } else if (item.type === 'file') {
+        const filename = item.name
+        const filePath = item.path
+        const size = item.size ?? 0
+
+        if (size >= 100_000) {
+          onLog?.({
+            source: 'repo-autoload',
+            filename,
+            path: filePath,
+            status: 'skipped',
+            sizeBytes: size,
+            technicalDetail: `File size ${size.toLocaleString()} bytes exceeds 100 KB limit`,
+            plainExplanation: `Skipped — this file is too large (${(size / 1024).toFixed(0)} KB). Only files under 100 KB are auto-loaded to keep the AI context focused.`,
+          })
+          continue
+        }
+
         try {
-          const content = await fetchFileContent(owner, repo, item.path, githubToken)
-          loaded.push({ path: item.path, content })
-        } catch {
-          // skip unreadable files
+          const content = await fetchFileContent(owner, repo, filePath, githubToken)
+          loaded.push({ path: filePath, content })
+          onLog?.({
+            source: 'repo-autoload',
+            filename,
+            path: filePath,
+            status: 'success',
+            sizeBytes: content.length,
+            plainExplanation: `Loaded successfully (${(content.length / 1024).toFixed(1)} KB, ${content.split('\n').length} lines).`,
+          })
+        } catch (e) {
+          const msg = (e as Error)?.message ?? 'Unknown error'
+          onLog?.({
+            source: 'repo-autoload',
+            filename,
+            path: filePath,
+            status: 'error',
+            sizeBytes: size,
+            technicalDetail: msg,
+            plainExplanation: 'Could not read this file. It may be binary, corrupted, or access was denied.',
+          })
         }
       }
     }
